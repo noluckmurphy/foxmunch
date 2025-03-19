@@ -1,0 +1,49 @@
+body, html {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    background-color: #006400; /* Dark green background */
+}
+
+#gameCanvas {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+#hud {
+    position: absolute;
+    bottom: 20px;
+    left: 20px;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    padding: 10px;
+    color: white;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+}
+
+#message {
+    position: absolute;
+    top: 40%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    text-shadow: rgba(0, 0, 0, 0.5) 4px 4px 4px;
+    font-size: 96px;
+    text-align: center;
+}
+
+#controlsLegend {
+    position: absolute;
+    bottom: 20px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    color: white;
+    padding: 10px;
+    font-family: Arial, sans-serif;
+    border-radius: 10px;
+}
