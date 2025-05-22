@@ -773,7 +773,7 @@ setTimeout(() => {
     hud.style.display = 'block';
     message.style.display = 'block';
     init(); // Start the game
-}, 3000);
+}, 4000);
 }
 
 showSplashScreen();
