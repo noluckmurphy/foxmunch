@@ -157,16 +157,18 @@ function updatePlayer() {
 }
 
 function updateEnemies() {
-    enemies.forEach((enemy, index) => {
+    // Iterate backwards so that splicing doesn't skip enemies
+    for (let i = enemies.length - 1; i >= 0; i--) {
+        const enemy = enemies[i];
         enemy.x += enemy.vx;
         enemy.y += enemy.vy;
 
         // Remove enemies that are off-screen
         if (enemy.x < -enemy.size || enemy.x > canvas.width + enemy.size ||
             enemy.y < -enemy.size || enemy.y > canvas.height + enemy.size) {
-            enemies.splice(index, 1);
+            enemies.splice(i, 1);
         }
-    });
+    }
 }
 
 function updateObstacles() {
@@ -214,7 +216,9 @@ function updateMelees() {
 
 function updateProjectiles() {
     const now = performance.now();
-    projectiles.forEach((projectile, pIndex) => {
+    // Iterate backwards to safely remove projectiles while looping
+    for (let pIndex = projectiles.length - 1; pIndex >= 0; pIndex--) {
+        const projectile = projectiles[pIndex];
         // On first update, initialize extra badass projectile properties.
         if (!projectile.initialized) {
             projectile.initialized = true;
@@ -252,7 +256,7 @@ function updateProjectiles() {
             projectile.y < 0 || projectile.y > canvas.height
         ) {
             projectiles.splice(pIndex, 1);
-            return;
+            continue;
         }
 
         // Check collision with enemies (iterating backwards for safe removal).
@@ -278,7 +282,7 @@ function updateProjectiles() {
                 break;
             }
         }
-    });
+    }
 }
 
 function updateBombs() {
@@ -297,7 +301,8 @@ function updateBombs() {
             bomb.done = true;
         }
         // Added bomb collision check: damage enemy if within bomb radius and not hit before.
-        enemies.forEach((enemy, index) => {
+        for (let eIndex = enemies.length - 1; eIndex >= 0; eIndex--) {
+            const enemy = enemies[eIndex];
             const dx = enemy.x - bomb.x;
             const dy = enemy.y - bomb.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
@@ -308,10 +313,10 @@ function updateBombs() {
                     if (enemy.type === 'small') player.score += 10;
                     else if (enemy.type === 'medium') player.score += 30;
                     else if (enemy.type === 'large') player.score += 50;
-                    enemies.splice(index, 1);
+                    enemies.splice(eIndex, 1);
                 }
             }
-        });
+        }
     });
     // Remove completed bombs
     bombs = bombs.filter(bomb => !bomb.done);
@@ -321,7 +326,8 @@ function checkCollisions() {
     const now = performance.now();
 
     // Player and enemies - bounce and damage on impact
-    enemies.forEach((enemy, index) => {
+    for (let index = enemies.length - 1; index >= 0; index--) {
+        const enemy = enemies[index];
         let dx = player.x - enemy.x;
         let dy = player.y - enemy.y;
         let distance = Math.sqrt(dx * dx + dy * dy);
@@ -368,7 +374,7 @@ function checkCollisions() {
             }
             }
         }
-    });
+    }
 
     // Player and obstacles - Bounce on collision with brief invulnerability
     obstacles.forEach((obstacle) => {
