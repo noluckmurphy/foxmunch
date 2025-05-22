@@ -1,4 +1,5 @@
 import { soundManager } from './sounds.js';
+import { normalizeAngle } from './utils.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -694,12 +695,6 @@ function dropBomb() {
     }
 }
 
-// Helper function to normalize angle between -PI and PI
-function normalizeAngle(angle) {
-    while (angle < -Math.PI) angle += 2 * Math.PI;
-    while (angle > Math.PI) angle -= 2 * Math.PI;
-    return angle;
-}
 
 function respawnPlayer() {
     soundManager.play('lifeLost');
