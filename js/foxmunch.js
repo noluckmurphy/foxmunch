@@ -751,7 +751,7 @@ splashScreen.style.height = '100%';
 splashScreen.style.display = 'flex';
 splashScreen.style.justifyContent = 'center';
 splashScreen.style.alignItems = 'center';
-splashScreen.style.backgroundColor = '#ff6600'; // Same as game background
+splashScreen.style.backgroundColor = '#ff6600'; // #ff6600 is used specifically for the splash screen
 splashScreen.style.zIndex = '1000'; // Ensure it is on top
 
 // Style splash text
