@@ -24,6 +24,26 @@ let lastTime = 0;
 let deltaTime = 0;
 let gameRunning = true;
 let gamePaused = false;
+let highScore = 0;
+
+function loadHighScore() {
+    if (typeof localStorage !== 'undefined') {
+        const stored = localStorage.getItem('highScore');
+        if (stored !== null) {
+            return parseInt(stored, 10);
+        }
+    }
+    return 0;
+}
+
+function updateHighScore(score) {
+    if (score > highScore) {
+        highScore = score;
+        if (typeof localStorage !== 'undefined') {
+            localStorage.setItem('highScore', Math.floor(highScore));
+        }
+    }
+}
 
 // Player object
 const player = new Player(canvas.width / 2, canvas.height / 2);
@@ -37,6 +57,8 @@ let melees = [];
 // Initialize game
 function init() {
     lastTime = performance.now();
+    highScore = loadHighScore();
+    player.score = 0;
     spawnObstacles();
     update();
 }
@@ -335,6 +357,7 @@ function updateHUD() {
         Bombs: ${player.bombs} <br>
         Score: ${Math.floor(player.score)} <br>
         Combo: x${player.comboMultiplier}
+        High Score: ${Math.floor(highScore)}
     `;
 }
 
@@ -434,6 +457,7 @@ function respawnPlayer() {
 }
 
 function gameOver() {
+    updateHighScore(player.score);
     gameRunning = false;
     message.innerText = 'Game Over';
     soundManager.play('gameOver');
