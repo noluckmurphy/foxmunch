@@ -71,7 +71,7 @@ function init() {
     highScore = loadHighScore();
     player.score = 0;
     spawnObstacles();
-    update();
+    update(performance.now()); // Pass current time to update
 }
 
 // Input is handled by the InputManager
@@ -471,11 +471,11 @@ function respawnPlayer() {
 }
 
 function gameOver() {
-    updateHighScore(player.score);
     gameRunning = false;
     const accuracy = player.shotsFired ? player.shotsHit / player.shotsFired : 0;
     const bonus = Math.floor(accuracy * 100);
     player.score += bonus;
+    updateHighScore(player.score); // Update high score after bonus is added
     message.innerText = `Game Over - Accuracy: ${(accuracy * 100).toFixed(0)}%`;
     soundManager.play('gameOver');
     player.comboMultiplier = 1;
