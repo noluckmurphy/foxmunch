@@ -4,6 +4,13 @@ import Player from "./entities/Player.js";
 import Enemy from "./entities/Enemy.js";
 import Projectile from "./entities/Projectile.js";
 import Bomb from "./entities/Bomb.js";
+import {
+    drawPlayer,
+    drawEnemies,
+    drawObstacles,
+    drawProjectiles,
+    drawBombs,
+} from './render.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -257,22 +264,22 @@ function draw() {
     drawEnvironment();
 
     // Draw obstacles
-    drawObstacles();
+    drawObstacles(ctx, obstacles);
 
     // Draw player
-    drawPlayer();
+    drawPlayer(ctx, player);
 
     // Draw projectiles
-    drawProjectiles();
+    drawProjectiles(ctx, projectiles);
 
     // Draw melees
     drawMelees();
 
     // Draw bombs
-    drawBombs();
+    drawBombs(ctx, bombs);
 
     // Draw enemies
-    drawEnemies();
+    drawEnemies(ctx, enemies);
 }
 
 function drawEnvironment() {
@@ -280,54 +287,6 @@ function drawEnvironment() {
     // Optionally, you can draw trees and lakes here
 }
 
-function drawPlayer() {
-    ctx.save();
-    ctx.translate(player.x, player.y);
-    ctx.rotate(player.angle);
-    ctx.beginPath();
-    // Draw an isosceles triangle rotated 90 degrees so the tip points right
-    ctx.moveTo(player.size, 0); // Tip of the triangle (pointing right)
-    ctx.lineTo(-player.size, -player.size * 0.75); // Top left
-    ctx.lineTo(-player.size, player.size * 0.75); // Bottom left
-    ctx.closePath();
-    ctx.fillStyle = 'orange';
-    ctx.fill();
-    ctx.restore();
-}
-
-function drawEnemies() {
-    enemies.forEach((enemy) => {
-        ctx.beginPath();
-        ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
-        ctx.fillStyle = 'black';
-        ctx.fill();
-    });
-}
-
-function drawObstacles() {
-    obstacles.forEach((obstacle) => {
-        ctx.beginPath();
-        ctx.arc(obstacle.x, obstacle.y, obstacle.size, 0, Math.PI * 2);
-        ctx.fillStyle = 'brown';
-        ctx.fill();
-    });
-}
-
-function drawProjectiles() {
-    projectiles.forEach((projectile) => {
-        ctx.save();
-        ctx.translate(projectile.x, projectile.y);
-        ctx.rotate(projectile.angle + Math.PI / 2);
-        ctx.beginPath();
-        ctx.moveTo(0, -projectile.size);
-        ctx.lineTo(projectile.size, projectile.size);
-        ctx.lineTo(-projectile.size, projectile.size);
-        ctx.closePath();
-        ctx.fillStyle = 'yellow';
-        ctx.fill();
-        ctx.restore();
-    });
-}
 
 function drawMelees() {
     melees.forEach((melee) => {
@@ -349,21 +308,6 @@ function drawMelees() {
     });
 }
 
-function drawBombs() {
-    bombs.forEach((bomb) => {
-        drawBomb(ctx, bomb);
-    });
-}
-
-function drawBomb(ctx, bomb) {
-    ctx.save();
-    ctx.globalAlpha = bomb.opacity;
-    ctx.beginPath();
-    ctx.arc(bomb.x, bomb.y, bomb.currentRadius, 0, Math.PI * 2);
-    ctx.fillStyle = 'white';
-    ctx.fill();
-    ctx.restore();
-}
 
 function updateHUD() {
     hud.innerHTML = `
