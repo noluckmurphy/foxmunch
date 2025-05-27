@@ -45,6 +45,7 @@ export default class Projectile {
             const distance = Math.sqrt(dx * dx + dy * dy);
             if (distance < enemy.size + this.size) {
                 enemy.hp -= this.damage;
+                if (player) player.shotsHit = (player.shotsHit || 0) + 1;
                 if (soundManager) soundManager.play('projectileHit');
                 if (enemy.hp <= 0) {
                     if (soundManager) soundManager.play('enemyDeath');
