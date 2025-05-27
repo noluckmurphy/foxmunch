@@ -37,6 +37,8 @@ let melees = [];
 // Initialize game
 function init() {
     lastTime = performance.now();
+    player.shotsFired = 0;
+    player.shotsHit = 0;
     spawnObstacles();
     update();
 }
@@ -333,7 +335,8 @@ function updateHUD() {
         Health: ${Math.max(0, Math.floor(player.hp))} <br>
         Acorns: ${player.acorns} <br>
         Bombs: ${player.bombs} <br>
-        Score: ${Math.floor(player.score)}
+        Score: ${Math.floor(player.score)} <br>
+        Accuracy: ${player.shotsFired ? Math.floor((player.shotsHit / player.shotsFired) * 100) : 0}%
     `;
 }
 
@@ -432,7 +435,10 @@ function respawnPlayer() {
 
 function gameOver() {
     gameRunning = false;
-    message.innerText = 'Game Over';
+    const accuracy = player.shotsFired ? player.shotsHit / player.shotsFired : 0;
+    const bonus = Math.floor(accuracy * 100);
+    player.score += bonus;
+    message.innerText = `Game Over - Accuracy: ${(accuracy * 100).toFixed(0)}%`;
     soundManager.play('gameOver');
 }
 

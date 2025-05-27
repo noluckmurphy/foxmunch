@@ -19,6 +19,8 @@ export default class Player {
         this.bombs = 5;
         this.lives = 3;
         this.score = 0;
+        this.shotsFired = 0;
+        this.shotsHit = 0;
         this.meleeCooldown = 0;
         this.projectileCooldown = 0;
         this.bombCooldown = 0;
@@ -95,6 +97,7 @@ export default class Player {
                 soundManager.play(isCritical ? 'criticalProjectileShoot' : 'projectileShoot');
             this.projectileCooldown = 0.05;
             this.acorns--;
+            this.shotsFired++;
         }
     }
 

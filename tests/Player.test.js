@@ -16,10 +16,12 @@ const assert = require('assert');
     assert.strictEqual(projectiles.length, 1, 'shootProjectile should add a projectile');
     assert.ok(projectiles[0] instanceof Projectile, 'Projectile should be instance of Projectile');
     assert.strictEqual(player.acorns, 99, 'Acorn count should decrease');
+    assert.strictEqual(player.shotsFired, 1, 'shotsFired should increment');
     const cooldownAfterShoot = player.projectileCooldown;
     player.shootProjectile(projectiles, null);
     assert.strictEqual(projectiles.length, 1, 'Should not fire while on cooldown');
     assert.strictEqual(player.projectileCooldown, cooldownAfterShoot, 'Cooldown should not change when firing too soon');
+    assert.strictEqual(player.shotsFired, 1, 'shotsFired should not increment when on cooldown');
 
     // Reset cooldown for next tests
     player.projectileCooldown = 0;
