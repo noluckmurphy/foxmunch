@@ -1,5 +1,6 @@
 import Projectile from './Projectile.js';
 import Bomb from './Bomb.js';
+import Melee from './Melee.js';
 
 export default class Player {
     constructor(x, y) {
@@ -99,15 +100,7 @@ export default class Player {
 
     performMeleeAttack(melees, soundManager) {
         if (this.meleeCooldown <= 0) {
-            melees.push({
-                x: this.x,
-                y: this.y,
-                angle: this.angle,
-                range: 50,
-                duration: 0.05,
-                startTime: performance.now() / 1000,
-                alreadyHit: new Set()
-            });
+            melees.push(new Melee(this.x, this.y, this.angle));
             if (soundManager) soundManager.play('meleeAttack');
             this.meleeCooldown = 0.5;
         }
