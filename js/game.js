@@ -30,13 +30,22 @@ function loadHighScore() {
     if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem('highScore');
         if (stored !== null) {
-            return parseInt(stored, 10);
+            const parsed = parseInt(stored, 10);
+            if (!isNaN(parsed) && isFinite(parsed)) {
+                return parsed;
+            } else {
+                // Remove invalid value
+                localStorage.removeItem('highScore');
+            }
         }
     }
     return 0;
 }
 
 function updateHighScore(score) {
+    // Ensure both score and highScore are valid numbers
+    if (typeof score !== 'number' || isNaN(score) || !isFinite(score)) return;
+    if (typeof highScore !== 'number' || isNaN(highScore) || !isFinite(highScore)) highScore = 0;
     if (score > highScore) {
         highScore = score;
         if (typeof localStorage !== 'undefined') {
@@ -352,15 +361,17 @@ function drawBomb(ctx, bomb) {
 }
 
 function updateHUD() {
+    // Guard against NaN values in HUD
+    const safe = v => (typeof v === 'number' && isFinite(v) && !isNaN(v)) ? Math.floor(v) : 0;
     hud.innerHTML = `
-        Lives: ${player.lives} <br>
-        Health: ${Math.max(0, Math.floor(player.hp))} <br>
-        Acorns: ${player.acorns} <br>
-        Bombs: ${player.bombs} <br>
-        Score: ${Math.floor(player.score)} <br>
+        Lives: ${safe(player.lives)} <br>
+        Health: ${safe(player.hp)} <br>
+        Acorns: ${safe(player.acorns)} <br>
+        Bombs: ${safe(player.bombs)} <br>
+        Score: ${safe(player.score)} <br>
         Accuracy: ${player.shotsFired ? Math.floor((player.shotsHit / player.shotsFired) * 100) : 0}% <br>
-        Combo: x${player.comboMultiplier} <br>
-        High Score: ${Math.floor(highScore)}
+        Combo: x${safe(player.comboMultiplier)} <br>
+        High Score: ${safe(highScore)}
     `;
 }
 
