@@ -1,9 +1,9 @@
 import { soundManager } from './sounds.js';
-import { normalizeAngle } from './utils.js';
 import Player from "./entities/Player.js";
 import Enemy from "./entities/Enemy.js";
 import Projectile from "./entities/Projectile.js";
 import Bomb from "./entities/Bomb.js";
+import Melee from "./entities/Melee.js";
 import { inputManager } from './InputManager.js';
 
 const canvas = document.getElementById('gameCanvas');
@@ -94,40 +94,9 @@ function updateObstacles() {
 }
 
 function updateMelees() {
-    const currentTime = performance.now() / 1000;
-    // Process each melee attack
     for (let i = melees.length - 1; i >= 0; i--) {
-        const melee = melees[i];
-        // Remove melee if expired
-        if (currentTime - melee.startTime > melee.duration) {
+        if (!melees[i].update(enemies, player)) {
             melees.splice(i, 1);
-            continue;
-        }
-        // Check for collision with enemies
-        // Iterate backwards to safely remove enemies
-        for (let j = enemies.length - 1; j >= 0; j--) {
-            const enemy = enemies[j];
-            // If enemy already hit by this melee attack, skip.
-            if (melee.alreadyHit.has(enemy)) continue;
-            // Compute vector from melee origin to enemy
-            const dx = enemy.x - melee.x;
-            const dy = enemy.y - melee.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            // Check if enemy is within the melee range (allow enemy size overlap)
-            if (distance <= melee.range + enemy.size) {
-                // Compute angle difference between melee angle and vector to enemy
-                const angleToEnemy = Math.atan2(dy, dx);
-                const angleDiff = Math.abs(normalizeAngle(angleToEnemy - melee.angle));
-                // 1/3rd slice means 120° arc (±60° i.e. Math.PI/3)
-                if (angleDiff <= Math.PI / 3) {
-                    // Enemy is hit: update score based on type and remove enemy
-                    if (enemy.type === 'small') player.score += 10;
-                    else if (enemy.type === 'medium') player.score += 30;
-                    else if (enemy.type === 'large') player.score += 50;
-                    melee.alreadyHit.add(enemy);
-                    enemies.splice(j, 1);
-                }
-            }
         }
     }
 }

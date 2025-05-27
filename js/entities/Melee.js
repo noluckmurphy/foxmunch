@@ -1,0 +1,39 @@
+import { normalizeAngle } from '../utils.js';
+
+export default class Melee {
+    constructor(x, y, angle, range = 50, duration = 0.05) {
+        this.x = x;
+        this.y = y;
+        this.angle = angle;
+        this.range = range;
+        this.duration = duration;
+        this.startTime = performance.now() / 1000;
+        this.alreadyHit = new Set();
+    }
+
+    update(enemies, player) {
+        const currentTime = performance.now() / 1000;
+        if (currentTime - this.startTime > this.duration) {
+            return false;
+        }
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const enemy = enemies[i];
+            if (this.alreadyHit.has(enemy)) continue;
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance <= this.range + enemy.size) {
+                const angleToEnemy = Math.atan2(dy, dx);
+                const angleDiff = Math.abs(normalizeAngle(angleToEnemy - this.angle));
+                if (angleDiff <= Math.PI / 3) {
+                    if (enemy.type === 'small') player.score += 10;
+                    else if (enemy.type === 'medium') player.score += 30;
+                    else if (enemy.type === 'large') player.score += 50;
+                    this.alreadyHit.add(enemy);
+                    enemies.splice(i, 1);
+                }
+            }
+        }
+        return true;
+    }
+}
