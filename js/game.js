@@ -4,6 +4,7 @@ import Player from "./entities/Player.js";
 import Enemy from "./entities/Enemy.js";
 import Projectile from "./entities/Projectile.js";
 import Bomb from "./entities/Bomb.js";
+import { inputManager } from './InputManager.js';
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -19,7 +20,6 @@ window.addEventListener('resize', () => {
 });
 
 // Game variables
-let keys = {};
 let lastTime = 0;
 let deltaTime = 0;
 let gameRunning = true;
@@ -41,14 +41,7 @@ function init() {
     update();
 }
 
-// Event listeners
-window.addEventListener('keydown', (e) => {
-    keys[e.key.toLowerCase()] = true;
-});
-
-window.addEventListener('keyup', (e) => {
-    keys[e.key.toLowerCase()] = false;
-});
+// Input is handled by the InputManager
 
 // Game update loop
 function update(time) {
@@ -85,7 +78,7 @@ function update(time) {
 }
 
 function updatePlayer() {
-    player.update(keys, deltaTime, canvas, projectiles, melees, bombs, soundManager);
+    player.update(inputManager, deltaTime, canvas, projectiles, melees, bombs, soundManager);
 }
 
 function updateEnemies() {

@@ -23,13 +23,13 @@ export default class Player {
         this.bombCooldown = 0;
     }
 
-    update(keys, deltaTime, canvas, projectiles, melees, bombs, soundManager) {
+    update(input, deltaTime, canvas, projectiles, melees, bombs, soundManager) {
         let dx = 0;
         let dy = 0;
-        if (keys['arrowup']) dy -= 1;
-        if (keys['arrowdown']) dy += 1;
-        if (keys['arrowleft']) dx -= 1;
-        if (keys['arrowright']) dx += 1;
+        if (input.isPressed('arrowup')) dy -= 1;
+        if (input.isPressed('arrowdown')) dy += 1;
+        if (input.isPressed('arrowleft')) dx -= 1;
+        if (input.isPressed('arrowright')) dx += 1;
 
         if (dx !== 0 || dy !== 0) {
             const direction = Math.atan2(dy, dx);
@@ -56,13 +56,13 @@ export default class Player {
         if (this.y < 0) this.y = canvas.height;
         if (this.y > canvas.height) this.y = 0;
 
-        if (keys[' ']) {
+        if (input.isPressed(' ')) {
             this.shootProjectile(projectiles, soundManager);
         }
-        if (keys['f']) {
+        if (input.isPressed('f')) {
             this.performMeleeAttack(melees, soundManager);
         }
-        if (keys['s']) {
+        if (input.isPressed('s')) {
             this.dropBomb(bombs, soundManager);
         }
 
