@@ -333,7 +333,8 @@ function updateHUD() {
         Health: ${Math.max(0, Math.floor(player.hp))} <br>
         Acorns: ${player.acorns} <br>
         Bombs: ${player.bombs} <br>
-        Score: ${Math.floor(player.score)}
+        Score: ${Math.floor(player.score)} <br>
+        Combo: x${player.comboMultiplier}
     `;
 }
 
@@ -422,6 +423,8 @@ function respawnPlayer() {
     player.y = canvas.height / 2;
     player.vx = 0;
     player.vy = 0;
+    player.comboMultiplier = 1;
+    player.lastKillTime = 0;
     message.innerText = 'You Died';
     gamePaused = true;
     setTimeout(() => {
@@ -434,6 +437,8 @@ function gameOver() {
     gameRunning = false;
     message.innerText = 'Game Over';
     soundManager.play('gameOver');
+    player.comboMultiplier = 1;
+    player.lastKillTime = 0;
 }
 
 // Splash screen implementation
