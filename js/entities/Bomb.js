@@ -1,0 +1,48 @@
+export default class Bomb {
+    constructor(x, y, critical = false) {
+        this.x = x;
+        this.y = y;
+        this.startTime = performance.now();
+        this.durationExpand = 200;
+        this.durationFade = 500;
+        this.maxRadius = critical ? 200 : 100;
+        this.currentRadius = 0;
+        this.opacity = 1;
+        this.done = false;
+        this.damage = critical ? 100 : 20;
+        this.hitEnemies = new Set();
+    }
+
+    update(enemies, player) {
+        const now = performance.now();
+        const elapsed = now - this.startTime;
+        if (elapsed < this.durationExpand) {
+            this.currentRadius = (elapsed / this.durationExpand) * this.maxRadius;
+            this.opacity = 1;
+        } else if (elapsed < this.durationExpand + this.durationFade) {
+            this.currentRadius = this.maxRadius;
+            this.opacity = 1 - ((elapsed - this.durationExpand) / this.durationFade);
+        } else {
+            this.done = true;
+        }
+
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const enemy = enemies[i];
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < this.currentRadius + enemy.size && !this.hitEnemies.has(enemy)) {
+                enemy.hp -= this.damage;
+                this.hitEnemies.add(enemy);
+                if (enemy.hp <= 0) {
+                    if (enemy.type === 'small') player.score += 10;
+                    else if (enemy.type === 'medium') player.score += 30;
+                    else if (enemy.type === 'large') player.score += 50;
+                    enemies.splice(i, 1);
+                }
+            }
+        }
+
+        return !this.done;
+    }
+}
