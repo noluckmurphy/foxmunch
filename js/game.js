@@ -358,8 +358,8 @@ function updateHUD() {
         Acorns: ${player.acorns} <br>
         Bombs: ${player.bombs} <br>
         Score: ${Math.floor(player.score)} <br>
-        Accuracy: ${player.shotsFired ? Math.floor((player.shotsHit / player.shotsFired) * 100) : 0}%
-        Combo: x${player.comboMultiplier}
+        Accuracy: ${player.shotsFired ? Math.floor((player.shotsHit / player.shotsFired) * 100) : 0}% <br>
+        Combo: x${player.comboMultiplier} <br>
         High Score: ${Math.floor(highScore)}
     `;
 }
