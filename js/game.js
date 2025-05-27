@@ -1,5 +1,9 @@
 import { soundManager } from './sounds.js';
 import { normalizeAngle } from './utils.js';
+import Player from "./entities/Player.js";
+import Enemy from "./entities/Enemy.js";
+import Projectile from "./entities/Projectile.js";
+import Bomb from "./entities/Bomb.js";
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -22,27 +26,7 @@ let gameRunning = true;
 let gamePaused = false;
 
 // Player object
-const player = {
-    x: canvas.width / 2,
-    y: canvas.height / 2,
-    size: 20,
-    color: '#FFA500', // Orange color
-    angle: 0,
-    vx: 0,
-    vy: 0,
-    maxSpeed: 4,
-    acceleration: 0.2,
-    deceleration: 0.05,
-    hp: 100,
-    acorns: 100,
-    bombs: 5,
-    lives: 3,
-    score: 0,
-    meleeCooldown: 0,
-    projectileCooldown: 0,
-    bombCooldown: 0
-};
-
+const player = new Player(canvas.width / 2, canvas.height / 2);
 // Arrays for game objects
 let enemies = [];
 let obstacles = [];
@@ -101,71 +85,12 @@ function update(time) {
 }
 
 function updatePlayer() {
-    let dx = 0;
-    let dy = 0;
-    if (keys['arrowup']) dy -= 1;
-    if (keys['arrowdown']) dy += 1;
-    if (keys['arrowleft']) dx -= 1;
-    if (keys['arrowright']) dx += 1;
-
-    if (dx !== 0 || dy !== 0) {
-        let direction = Math.atan2(dy, dx);
-        player.angle = direction;
-
-        // Acceleration
-        player.vx += Math.cos(direction) * player.acceleration;
-        player.vy += Math.sin(direction) * player.acceleration;
-
-        // Limit speed
-        let speed = Math.sqrt(player.vx * player.vx + player.vy * player.vy);
-        if (speed > player.maxSpeed) {
-            player.vx *= player.maxSpeed / speed;
-            player.vy *= player.maxSpeed / speed;
-        }
-    } else {
-        // Deceleration
-        player.vx *= (1 - player.deceleration);
-        player.vy *= (1 - player.deceleration);
-    }
-
-    player.x += player.vx;
-    player.y += player.vy;
-
-    // Keep player within screen bounds
-    if (player.x < 0) player.x = canvas.width;
-    if (player.x > canvas.width) player.x = 0;
-    if (player.y < 0) player.y = canvas.height;
-    if (player.y > canvas.height) player.y = 0;
-
-    // Attacks
-    if (keys[' ']) {
-        shootProjectile();
-    }
-
-    if (keys['f']) {
-        performMeleeAttack();
-    }
-
-    if (keys['s']) {
-        dropBomb();
-    }
-
-    // Cooldowns
-    if (player.projectileCooldown > 0) player.projectileCooldown -= deltaTime;
-    if (player.meleeCooldown > 0) player.meleeCooldown -= deltaTime;
-    if (player.bombCooldown > 0) player.bombCooldown -= deltaTime;
+    player.update(keys, deltaTime, canvas, projectiles, melees, bombs, soundManager);
 }
 
 function updateEnemies() {
-    // Iterate backwards so that splicing doesn't skip enemies
     for (let i = enemies.length - 1; i >= 0; i--) {
-        const enemy = enemies[i];
-        enemy.x += enemy.vx;
-        enemy.y += enemy.vy;
-
-        // Remove enemies that are off-screen
-        if (enemy.x < -enemy.size || enemy.x > canvas.width + enemy.size ||
-            enemy.y < -enemy.size || enemy.y > canvas.height + enemy.size) {
+        if (!enemies[i].update(canvas)) {
             enemies.splice(i, 1);
         }
     }
@@ -215,111 +140,19 @@ function updateMelees() {
 }
 
 function updateProjectiles() {
-    const now = performance.now();
-    // Iterate backwards to safely remove projectiles while looping
-    for (let pIndex = projectiles.length - 1; pIndex >= 0; pIndex--) {
-        const projectile = projectiles[pIndex];
-        // On first update, initialize extra badass projectile properties.
-        if (!projectile.initialized) {
-            projectile.initialized = true;
-            projectile.creationTime = now;
-            // Vary the initial direction within a 6° arc (±3° in radians)
-            const angleOffset = (Math.random() - 0.5) * (6 * Math.PI / 180);
-            projectile.angle += angleOffset;
-            // Make initial velocity faster by multiplying by 1.7
-            const baseSpeed = Math.sqrt(projectile.vx * projectile.vx + projectile.vy * projectile.vy);
-            const newSpeed = baseSpeed * 1.7;
-            projectile.initialVx = Math.cos(projectile.angle) * newSpeed;
-            projectile.initialVy = Math.sin(projectile.angle) * newSpeed;
-            // Set initial velocity to boosted values
-            projectile.vx = projectile.initialVx;
-            projectile.vy = projectile.initialVy;
-            // Determine a random decay rate between 1% and 20% of the initial velocity over 1 second.
-            projectile.decayRate = Math.random() * 0.19 + 0.01;
-        }
-
-        // Determine elapsed time in seconds.
-        let elapsed = (now - projectile.creationTime) / 1000;
-        // Calculate decay factor: if decay period (1 sec) hasn't elapsed, decay gradually;
-        // otherwise, hold at terminal velocity (initial speed reduced by decayRate).
-        let factor = elapsed < 1 ? 1 - projectile.decayRate * elapsed : 1 - projectile.decayRate;
-        projectile.vx = projectile.initialVx * factor;
-        projectile.vy = projectile.initialVy * factor;
-
-        // Update projectile position.
-        projectile.x += projectile.vx;
-        projectile.y += projectile.vy;
-
-        // Remove projectile if off-screen.
-        if (
-            projectile.x < 0 || projectile.x > canvas.width ||
-            projectile.y < 0 || projectile.y > canvas.height
-        ) {
-            projectiles.splice(pIndex, 1);
-            continue;
-        }
-
-        // Check collision with enemies (iterating backwards for safe removal).
-        for (let eIndex = enemies.length - 1; eIndex >= 0; eIndex--) {
-            const enemy = enemies[eIndex];
-            let dx = enemy.x - projectile.x;
-            let dy = enemy.y - projectile.y;
-            let distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance < enemy.size + projectile.size) {
-                enemy.hp -= projectile.damage;
-                soundManager.play('projectileHit');
-                projectiles.splice(pIndex, 1);
-
-                if (enemy.hp <= 0) {
-                    soundManager.play('enemyDeath');
-                    // Update score based on enemy type.
-                    if (enemy.type === 'small') player.score += 10;
-                    else if (enemy.type === 'medium') player.score += 30;
-                    else if (enemy.type === 'large') player.score += 50;
-                    enemies.splice(eIndex, 1);
-                }
-                break;
-            }
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+        if (!projectiles[i].update(canvas, enemies, player, soundManager)) {
+            projectiles.splice(i, 1);
         }
     }
 }
 
 function updateBombs() {
-    const now = performance.now();
-    bombs.forEach(bomb => {
-        const elapsed = now - bomb.startTime;
-        if (elapsed < bomb.durationExpand) {
-            // Expanding phase: animate radius from 0 to maxRadius
-            bomb.currentRadius = (elapsed / bomb.durationExpand) * bomb.maxRadius;
-            bomb.opacity = 1;
-        } else if (elapsed < bomb.durationExpand + bomb.durationFade) {
-            // Fade out phase: maintain maxRadius but reduce opacity to 0
-            bomb.currentRadius = bomb.maxRadius;
-            bomb.opacity = 1 - ((elapsed - bomb.durationExpand) / bomb.durationFade);
-        } else {
-            bomb.done = true;
+    for (let i = bombs.length - 1; i >= 0; i--) {
+        if (!bombs[i].update(enemies, player)) {
+            bombs.splice(i, 1);
         }
-        // Added bomb collision check: damage enemy if within bomb radius and not hit before.
-        for (let eIndex = enemies.length - 1; eIndex >= 0; eIndex--) {
-            const enemy = enemies[eIndex];
-            const dx = enemy.x - bomb.x;
-            const dy = enemy.y - bomb.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance < bomb.currentRadius + enemy.size && !bomb.hitEnemies.has(enemy)) {
-                enemy.hp -= bomb.damage;
-                bomb.hitEnemies.add(enemy);
-                if (enemy.hp <= 0) {
-                    if (enemy.type === 'small') player.score += 10;
-                    else if (enemy.type === 'medium') player.score += 30;
-                    else if (enemy.type === 'large') player.score += 50;
-                    enemies.splice(eIndex, 1);
-                }
-            }
-        }
-    });
-    // Remove completed bombs
-    bombs = bombs.filter(bomb => !bomb.done);
+    }
 }
 
 function checkCollisions() {
@@ -615,92 +448,8 @@ function createEnemy(type) {
     }
 
     let angle = Math.atan2(player.y - y, player.x - x);
-    return {
-        x: x,
-        y: y,
-        size: size,
-        hp: hp,
-        speed: speed,
-        damage: damage,
-        type: type,
-        vx: Math.cos(angle) * speed,
-        vy: Math.sin(angle) * speed
-    };
+    return new Enemy(x, y, size, hp, speed, damage, type, Math.cos(angle) * speed, Math.sin(angle) * speed);
 }
-
-function shootProjectile() {
-    if (player.projectileCooldown <= 0 && player.acorns > 0) {
-        // Determine if this projectile is critical (approx. 1 in 15 chance)
-        const isCritical = Math.random() < (1 / 15);
-        const baseSpeed = 7;
-        const projectileSpeed = isCritical ? baseSpeed * 2 : baseSpeed;
-        const baseSize = 5;
-        const projectileSize = isCritical ? baseSize * 2 : baseSize;
-        const damage = isCritical ? 9 : 3;
-        
-        const projectile = {
-            x: player.x + Math.cos(player.angle) * player.size,
-            y: player.y + Math.sin(player.angle) * player.size,
-            vx: Math.cos(player.angle) * projectileSpeed,
-            vy: Math.sin(player.angle) * projectileSpeed,
-            size: projectileSize,
-            damage: damage,
-            angle: player.angle
-        };
-        projectiles.push(projectile);
-        soundManager.play(isCritical ? 'criticalProjectileShoot' : 'projectileShoot');
-        player.projectileCooldown = 0.05; // 50 milliseconds
-        player.acorns--;
-    }
-}
-
-function performMeleeAttack() {
-    // Only allow new melee attack if cooldown is 0
-    if (player.meleeCooldown <= 0) {
-        // Create a melee attack entity at player's current position and angle
-        melees.push({
-            x: player.x,
-            y: player.y,
-            angle: player.angle,
-            range: 50,             // melee range (radius)
-            duration: 0.05,        // duration in seconds (50ms)
-            startTime: performance.now() / 1000,
-            alreadyHit: new Set()
-        });
-        soundManager.play('meleeAttack');
-        player.meleeCooldown = 0.5; // 500 milliseconds
-    }
-}
-
-function dropBomb() {
-    if (player.bombCooldown <= 0 && player.bombs > 0) {
-        // Generate a critical hit boolean (true with a probability of 1/8)
-        const isCritical = Math.random() < (1 / 6);
-        bombs.push({
-            x: player.x - Math.cos(player.angle) * player.size,
-            y: player.y - Math.sin(player.angle) * player.size,
-            startTime: performance.now(),
-            durationExpand: 200,
-            durationFade: 500,
-            maxRadius: isCritical ? 200 : 100,
-            currentRadius: 0,
-            opacity: 1,
-            done: false,
-            damage: isCritical ? 100 : 20, // double damage for critical bombs
-            hitEnemies: new Set()    // track enemies already damaged by this bomb
-        });
-        // Play different sound effects based on whether it's a critical bomb
-        if(isCritical) {
-            soundManager.play('criticalBombDrop');
-            soundManager.play('bombDrop');
-        } else {
-            soundManager.play('bombDrop');
-        }
-        player.bombCooldown = 3; // 3 seconds
-        player.bombs--;
-    }
-}
-
 
 function respawnPlayer() {
     soundManager.play('lifeLost');
