@@ -21,6 +21,8 @@ export default class Player {
         this.score = 0;
         this.shotsFired = 0;
         this.shotsHit = 0;
+        this.lastKillTime = 0;
+        this.comboMultiplier = 1;
         this.meleeCooldown = 0;
         this.projectileCooldown = 0;
         this.bombCooldown = 0;
@@ -126,5 +128,16 @@ export default class Player {
             this.bombCooldown = 3;
             this.bombs--;
         }
+    }
+
+    addKillScore(baseScore) {
+        const now = performance.now() / 1000;
+        if (now - this.lastKillTime <= 3) {
+            this.comboMultiplier += 1;
+        } else {
+            this.comboMultiplier = 1;
+        }
+        this.lastKillTime = now;
+        this.score += baseScore * this.comboMultiplier;
     }
 }

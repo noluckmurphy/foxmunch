@@ -49,9 +49,15 @@ export default class Projectile {
                 if (soundManager) soundManager.play('projectileHit');
                 if (enemy.hp <= 0) {
                     if (soundManager) soundManager.play('enemyDeath');
-                    if (enemy.type === 'small') player.score += 10;
-                    else if (enemy.type === 'medium') player.score += 30;
-                    else if (enemy.type === 'large') player.score += 50;
+                    let baseScore = 0;
+                    if (enemy.type === 'small') baseScore = 10;
+                    else if (enemy.type === 'medium') baseScore = 30;
+                    else if (enemy.type === 'large') baseScore = 50;
+                    if (typeof player.addKillScore === 'function') {
+                        player.addKillScore(baseScore);
+                    } else {
+                        player.score += baseScore;
+                    }
                     enemies.splice(i, 1);
                 }
                 return false;
