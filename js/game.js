@@ -28,6 +28,14 @@ let gameRunning = true;
 let gamePaused = false;
 let highScore = 0;
 
+let shakeDuration = 0;
+let shakeIntensity = 0;
+function triggerScreenShake(intensity = 5, duration = 200) {
+    shakeIntensity = intensity;
+    shakeDuration = duration;
+}
+if (typeof window !== "undefined") window.triggerScreenShake = triggerScreenShake;
+
 function loadHighScore() {
     if (typeof localStorage !== 'undefined') {
         const stored = localStorage.getItem('highScore');
@@ -148,7 +156,7 @@ function updateProjectiles() {
 
 function updateBombs() {
     for (let i = bombs.length - 1; i >= 0; i--) {
-        if (!bombs[i].update(enemies, player, particles)) {
+        if (!bombs[i].update(enemies, player, particles, () => triggerScreenShake(8, 150))) {
             bombs.splice(i, 1);
         }
     }
@@ -194,6 +202,7 @@ function checkCollisions() {
             enemy.hp -= enemy.damage;
 
             soundManager.play('playerHurt');
+            triggerScreenShake(5, 200);
 
             // Set brief invulnerability (120ms)
             player.invulnerableUntil = performance.now() + 120;
@@ -241,6 +250,7 @@ function checkCollisions() {
             if (!player.invulnerableUntil || now >= player.invulnerableUntil) {
                 player.hp -= 1;
                 soundManager.play('collision');
+                triggerScreenShake(5, 200);
                 player.invulnerableUntil = now + 120; // 120ms invulnerability period
 
                 if (player.hp <= 0) {
@@ -257,32 +267,30 @@ function checkCollisions() {
 }
 
 function draw() {
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // Draw environment
+    let offsetX = 0;
+    let offsetY = 0;
+    if (shakeDuration > 0) {
+        offsetX = (Math.random() - 0.5) * shakeIntensity;
+        offsetY = (Math.random() - 0.5) * shakeIntensity;
+        shakeDuration -= deltaTime * 1000;
+        if (shakeDuration < 0) shakeDuration = 0;
+    }
+
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+
     drawEnvironment();
-
-    // Draw obstacles
     drawObstacles();
-
-    // Draw player
     drawPlayer();
-
-    // Draw projectiles
     drawProjectiles();
-
-    // Draw melees
     drawMelees();
-
-    // Draw bombs
     drawBombs();
-
-    // Draw particles
     drawParticles();
-
-    // Draw enemies
     drawEnemies();
+
+    ctx.restore();
 }
 
 function drawEnvironment() {
@@ -307,8 +315,14 @@ function drawPlayer() {
     ctx.lineTo(-player.size, -player.size * 0.75); // Top left
     ctx.lineTo(-player.size, player.size * 0.75); // Bottom left
     ctx.closePath();
+    let alpha = 1;
+    if (player.invulnerableUntil && performance.now() < player.invulnerableUntil) {
+        alpha = 0.5 + 0.5 * Math.sin(performance.now() / 60);
+    }
     ctx.fillStyle = 'orange';
+    ctx.globalAlpha = alpha;
     ctx.fill();
+    ctx.globalAlpha = 1;
     ctx.restore();
 }
 
@@ -379,6 +393,14 @@ function drawBomb(ctx, bomb) {
     ctx.arc(bomb.x, bomb.y, bomb.currentRadius, 0, Math.PI * 2);
     ctx.fillStyle = 'white';
     ctx.fill();
+    if (bomb.ringOpacity > 0) {
+        ctx.globalAlpha = bomb.ringOpacity;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(bomb.x, bomb.y, bomb.ringRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'white';
+        ctx.stroke();
+    }
     ctx.restore();
 }
 

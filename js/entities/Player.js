@@ -125,6 +125,9 @@ export default class Player {
                 if (isCritical) soundManager.play('criticalBombDrop');
                 soundManager.play('bombDrop');
             }
+            if (typeof window !== 'undefined' && window.triggerScreenShake) {
+                window.triggerScreenShake(8, 200);
+            }
             this.bombCooldown = 3;
             this.bombs--;
         }
