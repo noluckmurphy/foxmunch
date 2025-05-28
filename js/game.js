@@ -357,6 +357,14 @@ function drawBomb(ctx, bomb) {
     ctx.arc(bomb.x, bomb.y, bomb.currentRadius, 0, Math.PI * 2);
     ctx.fillStyle = 'white';
     ctx.fill();
+    if (bomb.ringOpacity > 0) {
+        ctx.globalAlpha = bomb.ringOpacity;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(bomb.x, bomb.y, bomb.ringRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'white';
+        ctx.stroke();
+    }
     ctx.restore();
 }
 
