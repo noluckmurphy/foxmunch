@@ -2,11 +2,13 @@ import { soundManager } from './sounds.js';
 import Player from "./entities/Player.js";
 import Enemy from "./entities/Enemy.js";
 import EliteEnemy from "./entities/EliteEnemy.js";
+import Enemy, { spawnDeathParticles } from "./entities/Enemy.js";
 import Projectile from "./entities/Projectile.js";
 import Bomb from "./entities/Bomb.js";
 import Melee from "./entities/Melee.js";
 import Particle from "./entities/Particle.js";
 import FloatingText from "./entities/FloatingText.js";
+import Star from "./entities/Star.js";
 import { inputManager } from './InputManager.js';
 
 
@@ -91,8 +93,10 @@ let melees = [];
 let particles = [];
 let messages = [];
 let enemyProjectiles = [];
-
+let stars = [];
 let nextEliteSpawn = performance.now() / 1000 + 60 + Math.random() * 120;
+
+
 
 function pushComboMessage(combo, x, y) {
     messages.push(new FloatingText(x, y - 30, `x${combo}!`, 1));
@@ -132,6 +136,7 @@ function update(time) {
     updateBombs();
     updateEnemyProjectiles();
     updateParticles();
+    updateStars();
     updateMessages();
 
     // Collision detection
@@ -145,6 +150,7 @@ function update(time) {
 
     // Spawn enemies
     spawnEnemies();
+    spawnStars();
 
     // Increase score over time
     player.score += deltaTime;
@@ -250,6 +256,14 @@ function updateParticles() {
     }
 }
 
+function updateStars() {
+    for (let i = stars.length - 1; i >= 0; i--) {
+        if (!stars[i].update(deltaTime, player)) {
+            stars.splice(i, 1);
+        }
+    }
+}
+
 function updateMessages() {
     for (let i = messages.length - 1; i >= 0; i--) {
         if (!messages[i].update(deltaTime)) {
@@ -297,6 +311,7 @@ function checkCollisions() {
 
             // Remove enemy if its health drops to 0 or below
             if (enemy.hp <= 0) {
+                spawnDeathParticles(enemy, particles);
                 enemies.splice(index, 1);
             }
 
@@ -376,6 +391,7 @@ function draw() {
     drawEnemyProjectiles();
     drawMelees();
     drawBombs();
+    drawStars();
     drawParticles();
     drawEnemies();
     drawMessages();
@@ -527,6 +543,9 @@ function drawEnemyProjectiles() {
         ctx.fillStyle = 'pink';
         ctx.fill();
     });
+
+function drawStars() {
+    stars.forEach(star => star.draw(ctx));
 }
 
 function drawBomb(ctx, bomb) {
@@ -592,6 +611,14 @@ function spawnEnemies() {
 
         let enemy = createEnemy(type);
         enemies.push(enemy);
+    }
+}
+
+function spawnStars() {
+    if (Math.random() < 0.01) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        stars.push(new Star(x, y));
     }
 }
 
