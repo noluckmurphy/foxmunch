@@ -13,7 +13,7 @@ export default class Enemy {
         this.vy = vy;
     }
 
-    update(canvas) {
+    update(canvas, _enemyProjectiles = null) {
         this.x += this.vx;
         this.y += this.vy;
         if (

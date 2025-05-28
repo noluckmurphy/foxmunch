@@ -28,14 +28,25 @@ export default class Melee {
                 const angleToEnemy = Math.atan2(dy, dx);
                 const angleDiff = Math.abs(normalizeAngle(angleToEnemy - this.angle));
                 if (angleDiff <= Math.PI / 3) {
-                    let baseScore = 0;
-                    if (enemy.type === 'small') baseScore = 10;
-                    else if (enemy.type === 'medium') baseScore = 30;
-                    else if (enemy.type === 'large') baseScore = 50;
-                    if (typeof player.addKillScore === 'function') {
-                        player.addKillScore(baseScore);
+                    if (enemy.type === 'elite' && enemy.shield > 0) {
+                        enemy.shield -= 10;
+                        if (enemy.shield < 0) {
+                            enemy.hp += enemy.shield;
+                            enemy.shield = 0;
+                        }
+                        this.alreadyHit.add(enemy);
                     } else {
-                        player.score += baseScore;
+                        let baseScore = 0;
+                        if (enemy.type === 'small') baseScore = 10;
+                        else if (enemy.type === 'medium') baseScore = 30;
+                        else if (enemy.type === 'large') baseScore = 50;
+                        else if (enemy.type === 'orbital') baseScore = 5;
+                        else if (enemy.type === 'elite') baseScore = 100;
+                        if (typeof player.addKillScore === 'function') {
+                            player.addKillScore(baseScore);
+                        } else {
+                            player.score += baseScore;
+                        }
                     }
                     if (enemy.type === 'large' && typeof player.bombs === 'number') {
                         if (Math.random() < 0.15 && player.bombs < 5) {

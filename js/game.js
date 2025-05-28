@@ -1,5 +1,7 @@
 import { soundManager } from './sounds.js';
 import Player from "./entities/Player.js";
+import Enemy from "./entities/Enemy.js";
+import EliteEnemy from "./entities/EliteEnemy.js";
 import Enemy, { spawnDeathParticles } from "./entities/Enemy.js";
 import Projectile from "./entities/Projectile.js";
 import Bomb from "./entities/Bomb.js";
@@ -90,7 +92,11 @@ let bombs = [];
 let melees = [];
 let particles = [];
 let messages = [];
+let enemyProjectiles = [];
 let stars = [];
+let nextEliteSpawn = performance.now() / 1000 + 60 + Math.random() * 120;
+
+
 
 function pushComboMessage(combo, x, y) {
     messages.push(new FloatingText(x, y - 30, `x${combo}!`, 1));
@@ -128,6 +134,7 @@ function update(time) {
     updateProjectiles();
     updateMelees();
     updateBombs();
+    updateEnemyProjectiles();
     updateParticles();
     updateStars();
     updateMessages();
@@ -155,7 +162,7 @@ function updatePlayer() {
 
 function updateEnemies() {
     for (let i = enemies.length - 1; i >= 0; i--) {
-        if (!enemies[i].update(canvas)) {
+        if (!enemies[i].update(canvas, enemyProjectiles)) {
             enemies.splice(i, 1);
         }
     }
@@ -207,6 +214,36 @@ function updateBombs() {
     for (let i = bombs.length - 1; i >= 0; i--) {
         if (!bombs[i].update(enemies, player, particles, () => triggerScreenShake(8, 150))) {
             bombs.splice(i, 1);
+        }
+    }
+}
+
+function updateEnemyProjectiles() {
+    for (let i = enemyProjectiles.length - 1; i >= 0; i--) {
+        const p = enemyProjectiles[i];
+        if (!p.update(canvas)) {
+            enemyProjectiles.splice(i, 1);
+            continue;
+        }
+        const dx = player.x - p.x;
+        const dy = player.y - p.y;
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        if (distance < p.size + player.size) {
+            if (!player.invulnerableUntil || performance.now() >= player.invulnerableUntil) {
+                player.hp -= p.damage;
+                soundManager.play('playerHurt');
+                triggerScreenShake(5, 200);
+                player.invulnerableUntil = performance.now() + 120;
+                if (player.hp <= 0) {
+                    player.lives--;
+                    if (player.lives > 0) {
+                        respawnPlayer();
+                    } else {
+                        gameOver();
+                    }
+                }
+            }
+            enemyProjectiles.splice(i, 1);
         }
     }
 }
@@ -351,6 +388,7 @@ function draw() {
     drawObstacles();
     drawPlayer();
     drawProjectiles();
+    drawEnemyProjectiles();
     drawMelees();
     drawBombs();
     drawStars();
@@ -418,10 +456,29 @@ function drawPlayer() {
 
 function drawEnemies() {
     enemies.forEach((enemy) => {
-        ctx.beginPath();
-        ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
-        ctx.fillStyle = 'black';
-        ctx.fill();
+        if (enemy.type === 'orbital') {
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+            ctx.fillStyle = 'gray';
+            ctx.fill();
+        } else if (enemy.type === 'elite') {
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+            if (enemy.shield > 0) {
+                ctx.beginPath();
+                ctx.lineWidth = 10 * (enemy.shield / enemy.shieldMax);
+                ctx.strokeStyle = 'pink';
+                ctx.arc(enemy.x, enemy.y, enemy.size + 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+        } else {
+            ctx.beginPath();
+            ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+            ctx.fillStyle = 'black';
+            ctx.fill();
+        }
     });
 }
 
@@ -479,6 +536,14 @@ function drawBombs() {
     });
 }
 
+function drawEnemyProjectiles() {
+    enemyProjectiles.forEach((p) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fillStyle = 'pink';
+        ctx.fill();
+    });
+
 function drawStars() {
     stars.forEach(star => star.draw(ctx));
 }
@@ -530,6 +595,13 @@ function updateHUD() {
 
 function spawnEnemies() {
     // Spawn logic based on proportions
+    const now = performance.now() / 1000;
+    if (now >= nextEliteSpawn) {
+        const elite = createEliteEnemy();
+        enemies.push(elite);
+        elite.createOrbitals(enemies, enemyProjectiles);
+        nextEliteSpawn = now + 60 + Math.random() * 120;
+    }
     if (Math.random() < 0.02) {
         let rand = Math.random();
         let type;
@@ -628,6 +700,27 @@ function createEnemy(type) {
 
     let angle = Math.atan2(player.y - y, player.x - x);
     return new Enemy(x, y, size, hp, speed, damage, type, Math.cos(angle) * speed, Math.sin(angle) * speed);
+}
+
+function createEliteEnemy() {
+    let size = 84;
+    let hp = 52;
+    let speed = 0.5 + Math.random();
+    let damage = 30;
+
+    let side = Math.floor(Math.random() * 4);
+    let x, y;
+    switch (side) {
+        case 0: x = Math.random() * canvas.width; y = -size; break;
+        case 1: x = canvas.width + size; y = Math.random() * canvas.height; break;
+        case 2: x = Math.random() * canvas.width; y = canvas.height + size; break;
+        case 3: x = -size; y = Math.random() * canvas.height; break;
+    }
+
+    const angle = Math.atan2(player.y - y, player.x - x);
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+    return new EliteEnemy(x, y, vx, vy);
 }
 
 function respawnPlayer() {
