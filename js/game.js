@@ -4,21 +4,24 @@ import Enemy from "./entities/Enemy.js";
 import Projectile from "./entities/Projectile.js";
 import Bomb from "./entities/Bomb.js";
 import Melee from "./entities/Melee.js";
+import Particle from "./entities/Particle.js";
 import { inputManager } from './InputManager.js';
 
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
-const hud = document.getElementById('hud');
-const message = document.getElementById('message');
+
+const canvas = typeof document !== 'undefined' ? document.getElementById('gameCanvas') : { width: 800, height: 600, getContext: () => null };
+const ctx = canvas.getContext ? canvas.getContext('2d') : null;
+const hud = typeof document !== 'undefined' ? document.getElementById('hud') : null;
+const message = typeof document !== 'undefined' ? document.getElementById('message') : null;
 const pauseOverlay = document.getElementById('pauseOverlay');
 
-canvas.width = window.innerWidth;
-canvas.height = window.innerHeight;
-
-window.addEventListener('resize', () => {
+if (typeof window !== 'undefined') {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
-});
+    window.addEventListener('resize', () => {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    });
+}
 
 // Game variables
 let lastTime = 0;
@@ -81,6 +84,7 @@ let obstacles = [];
 let projectiles = [];
 let bombs = [];
 let melees = [];
+let particles = [];
 
 // Initialize game
 function init() {
@@ -112,6 +116,7 @@ function update(time) {
     updateProjectiles();
     updateMelees();
     updateBombs();
+    updateParticles();
 
     // Collision detection
     checkCollisions();
@@ -147,7 +152,7 @@ function updateObstacles() {
 
 function updateMelees() {
     for (let i = melees.length - 1; i >= 0; i--) {
-        if (!melees[i].update(enemies, player)) {
+        if (!melees[i].update(enemies, player, particles)) {
             melees.splice(i, 1);
         }
     }
@@ -155,7 +160,7 @@ function updateMelees() {
 
 function updateProjectiles() {
     for (let i = projectiles.length - 1; i >= 0; i--) {
-        if (!projectiles[i].update(canvas, enemies, player, soundManager)) {
+        if (!projectiles[i].update(canvas, enemies, player, soundManager, particles)) {
             projectiles.splice(i, 1);
         }
     }
@@ -163,8 +168,16 @@ function updateProjectiles() {
 
 function updateBombs() {
     for (let i = bombs.length - 1; i >= 0; i--) {
-        if (!bombs[i].update(enemies, player, () => triggerScreenShake(8, 150))) {
+        if (!bombs[i].update(enemies, player, particles, () => triggerScreenShake(8, 150))) {
             bombs.splice(i, 1);
+        }
+    }
+}
+
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        if (!particles[i].update(deltaTime)) {
+            particles.splice(i, 1);
         }
     }
 }
@@ -286,14 +299,22 @@ function draw() {
     drawProjectiles();
     drawMelees();
     drawBombs();
+    drawParticles();
     drawEnemies();
 
     ctx.restore();
 }
 
 function drawEnvironment() {
-    // Since the background is a solid color, we don't need to draw anything extra
-    // Optionally, you can draw trees and lakes here
+    // Background is solid but occasionally emit subtle particles
+    if (Math.random() < 0.02) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const size = Math.random() * 2 + 1;
+        const vy = -0.5 - Math.random() * 0.5;
+        const life = 2 + Math.random() * 2;
+        particles.push(new Particle(x, y, 0, vy, size, life, 'rgba(255,255,255,0.5)'));
+    }
 }
 
 function drawPlayer() {
@@ -393,6 +414,10 @@ function drawBomb(ctx, bomb) {
         ctx.stroke();
     }
     ctx.restore();
+}
+
+function drawParticles() {
+    particles.forEach(p => p.draw(ctx));
 }
 
 function updateHUD() {
@@ -501,24 +526,29 @@ function respawnPlayer() {
     player.vy = 0;
     player.comboMultiplier = 1;
     player.lastKillTime = 0;
-    message.innerText = 'You Died';
+    if (message) message.innerText = 'You Died';
     gamePaused = true;
     setTimeout(() => {
-        message.innerText = '';
+        if (message) message.innerText = '';
         gamePaused = false;
     }, 3000);
 }
 
-function gameOver() {
+function gameOver(p = player) {
     gameRunning = false;
-    const accuracy = player.shotsFired ? player.shotsHit / player.shotsFired : 0;
+    const accuracy = p.shotsFired ? p.shotsHit / p.shotsFired : 0;
     const bonus = Math.floor(accuracy * 100);
-    player.score += bonus;
-    updateHighScore(player.score); // Update high score after bonus is added
-    message.innerText = `Game Over - Accuracy: ${(accuracy * 100).toFixed(0)}%`;
+    p.score += bonus;
+    const isNewHighScore = p.score > highScore;
+    updateHighScore(p.score);
+    if (message) {
+        let msg = `Game Over <br/> Score: ${Math.floor(p.score)} <br/> Accuracy: ${(accuracy * 100).toFixed(0)}%`;
+        if (isNewHighScore) msg += ' <br/> ✨ New High Score! ✨';
+        message.innerHTML = msg;
+    }
     soundManager.play('gameOver');
-    player.comboMultiplier = 1;
-    player.lastKillTime = 0;
+    p.comboMultiplier = 1;
+    p.lastKillTime = 0;
 }
 
 // Splash screen implementation
@@ -578,4 +608,8 @@ setTimeout(() => {
 }, 4000);
 }
 
-showSplashScreen();
+if (typeof document !== 'undefined') {
+    showSplashScreen();
+}
+
+export { gameOver };
