@@ -1,6 +1,5 @@
 import { soundManager } from './sounds.js';
 import Player from "./entities/Player.js";
-import Enemy from "./entities/Enemy.js";
 import EliteEnemy from "./entities/EliteEnemy.js";
 import Enemy, { spawnDeathParticles } from "./entities/Enemy.js";
 import Projectile from "./entities/Projectile.js";
@@ -402,9 +401,9 @@ function draw() {
 function drawEnvironment() {
     scenery.forEach((obj) => {
         ctx.save();
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#003300';
-        ctx.fillStyle = '#004d00';
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'rgba(0, 77, 0, 0.3)';
+        ctx.fillStyle = 'rgba(0, 153, 0, 0.3)';
         if (obj.type === 'tree') {
             ctx.beginPath();
             ctx.moveTo(obj.x, obj.y - obj.size);
@@ -489,7 +488,7 @@ function drawObstacles() {
         ctx.fillStyle = 'brown';
         ctx.fill();
         ctx.lineWidth = 1;
-        ctx.strokeStyle = 'red';
+        ctx.strokeStyle = 'darkred';
         ctx.stroke();
     });
 }
@@ -543,6 +542,7 @@ function drawEnemyProjectiles() {
         ctx.fillStyle = 'pink';
         ctx.fill();
     });
+}
 
 function drawStars() {
     stars.forEach(star => star.draw(ctx));
