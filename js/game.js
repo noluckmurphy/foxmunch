@@ -1,6 +1,6 @@
 import { soundManager } from './sounds.js';
 import Player from "./entities/Player.js";
-import Enemy from "./entities/Enemy.js";
+import Enemy, { spawnDeathParticles } from "./entities/Enemy.js";
 import Projectile from "./entities/Projectile.js";
 import Bomb from "./entities/Bomb.js";
 import Melee from "./entities/Melee.js";
@@ -274,6 +274,7 @@ function checkCollisions() {
 
             // Remove enemy if its health drops to 0 or below
             if (enemy.hp <= 0) {
+                spawnDeathParticles(enemy, particles);
                 enemies.splice(index, 1);
             }
 

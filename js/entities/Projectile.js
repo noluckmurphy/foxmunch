@@ -1,4 +1,5 @@
 import Particle from './Particle.js';
+import { spawnDeathParticles } from './Enemy.js';
 
 export default class Projectile {
     constructor(x, y, vx, vy, size, damage, angle) {
@@ -53,13 +54,7 @@ export default class Projectile {
                     } else {
                         player.score += baseScore;
                     }
-                    if (particles) {
-                        for (let j = 0; j < 8; j++) {
-                            const a = Math.random() * Math.PI * 2;
-                            const s = Math.random() * 2 + 1;
-                            particles.push(new Particle(enemy.x, enemy.y, Math.cos(a) * s, Math.sin(a) * s, 2, 0.6));
-                        }
-                    }
+                    spawnDeathParticles(enemy, particles);
                     enemies.splice(i, 1);
                 }
                 return false;

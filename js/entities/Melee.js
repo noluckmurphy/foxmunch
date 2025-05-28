@@ -1,5 +1,6 @@
 import { normalizeAngle } from '../utils.js';
 import Particle from './Particle.js';
+import { spawnDeathParticles } from './Enemy.js';
 
 export default class Melee {
     constructor(x, y, angle, range = 50, duration = 0.05) {
@@ -36,18 +37,12 @@ export default class Melee {
                     } else {
                         player.score += baseScore;
                     }
-                    if (particles) {
-                        for (let j = 0; j < 6; j++) {
-                            const a = Math.random() * Math.PI * 2;
-                            const s = Math.random() * 2 + 1;
-                            particles.push(new Particle(enemy.x, enemy.y, Math.cos(a) * s, Math.sin(a) * s, 2, 0.5));
-                        }
-                    }
                     if (enemy.type === 'large' && typeof player.bombs === 'number') {
                         if (Math.random() < 0.15 && player.bombs < 5) {
                             player.bombs += 1;
                         }
                     }
+                    spawnDeathParticles(enemy, particles);
                     this.alreadyHit.add(enemy);
                     enemies.splice(i, 1);
                 }

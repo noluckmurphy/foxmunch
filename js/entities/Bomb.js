@@ -1,4 +1,5 @@
 import Particle from './Particle.js';
+import { spawnDeathParticles } from './Enemy.js';
 
 export default class Bomb {
     constructor(x, y, critical = false) {
@@ -57,13 +58,7 @@ export default class Bomb {
                     } else {
                         player.score += baseScore;
                     }
-                    if (particles) {
-                        for (let j = 0; j < 12; j++) {
-                            const a = Math.random() * Math.PI * 2;
-                            const s = Math.random() * 3 + 1;
-                            particles.push(new Particle(enemy.x, enemy.y, Math.cos(a) * s, Math.sin(a) * s, 3, 0.8));
-                        }
-                    }
+                    spawnDeathParticles(enemy, particles);
                     enemies.splice(i, 1);
                 }
             }
