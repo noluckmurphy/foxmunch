@@ -37,6 +37,11 @@ export default class Melee {
                     } else {
                         player.score += baseScore;
                     }
+                    if (enemy.type === 'large' && typeof player.bombs === 'number') {
+                        if (Math.random() < 0.15 && player.bombs < 5) {
+                            player.bombs += 1;
+                        }
+                    }
                     spawnDeathParticles(enemy, particles);
                     this.alreadyHit.add(enemy);
                     enemies.splice(i, 1);
