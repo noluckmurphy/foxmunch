@@ -10,6 +10,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 const hud = document.getElementById('hud');
 const message = document.getElementById('message');
+const pauseOverlay = document.getElementById('pauseOverlay');
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
@@ -25,6 +26,16 @@ let deltaTime = 0;
 let gameRunning = true;
 let gamePaused = false;
 let highScore = 0;
+
+// Toggle pause on "P" key press
+if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', (e) => {
+        if (e.key.toLowerCase() === 'p') {
+            gamePaused = !gamePaused;
+            if (pauseOverlay) pauseOverlay.style.display = gamePaused ? 'flex' : 'none';
+        }
+    });
+}
 
 let shakeDuration = 0;
 let shakeIntensity = 0;
@@ -387,15 +398,19 @@ function drawBomb(ctx, bomb) {
 function updateHUD() {
     // Guard against NaN values in HUD
     const safe = v => (typeof v === 'number' && isFinite(v) && !isNaN(v)) ? Math.floor(v) : 0;
+    const healthPct = Math.max(0, Math.min(safe(player.hp), 100));
+    const acornPct = Math.max(0, Math.min(safe(player.acorns), 100));
+    const bombPct = Math.max(0, Math.min(safe(player.bombs * 20), 100)); // 5 bombs = 100%
+
     hud.innerHTML = `
-        Lives: ${safe(player.lives)} <br>
-        Health: ${safe(player.hp)} <br>
-        Acorns: ${safe(player.acorns)} <br>
-        Bombs: ${safe(player.bombs)} <br>
-        Score: ${safe(player.score)} <br>
-        Accuracy: ${player.shotsFired ? Math.floor((player.shotsHit / player.shotsFired) * 100) : 0}% <br>
-        Combo: x${safe(player.comboMultiplier)} <br>
-        High Score: ${safe(highScore)}
+        <div>Lives: ${safe(player.lives)}</div>
+        <div class="hud-row"><span class="hud-label">Health: ${safe(player.hp)}</span><div class="hud-bar"><div class="hud-fill" style="width:${healthPct}%"></div></div></div>
+        <div class="hud-row"><span class="hud-label">Acorns: ${safe(player.acorns)}</span><div class="hud-bar"><div class="hud-fill" style="width:${acornPct}%"></div></div></div>
+        <div class="hud-row"><span class="hud-label">Bombs: ${safe(player.bombs)}</span><div class="hud-bar"><div class="hud-fill" style="width:${bombPct}%"></div></div></div>
+        <div>Score: ${safe(player.score)}</div>
+        <div>Accuracy: ${player.shotsFired ? Math.floor((player.shotsHit / player.shotsFired) * 100) : 0}%</div>
+        <div>Combo: x${safe(player.comboMultiplier)}</div>
+        <div>High Score: ${safe(highScore)}</div>
     `;
 }
 
