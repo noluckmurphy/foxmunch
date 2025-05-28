@@ -8,7 +8,7 @@ import Particle from "./entities/Particle.js";
 import { inputManager } from './InputManager.js';
 
 
-const canvas = typeof document !== 'undefined' ? document.getElementById('gameCanvas') : { width: 800, height: 600, getContext: () => null };
+const canvas = typeof document !== 'undefined' ? document.getElementById('gameCanvas') : { getContext: () => null };
 const ctx = canvas.getContext ? canvas.getContext('2d') : null;
 const hud = typeof document !== 'undefined' ? document.getElementById('hud') : null;
 const message = typeof document !== 'undefined' ? document.getElementById('message') : null;
