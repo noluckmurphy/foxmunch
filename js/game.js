@@ -523,8 +523,13 @@ function gameOver(p = player) {
     const accuracy = p.shotsFired ? p.shotsHit / p.shotsFired : 0;
     const bonus = Math.floor(accuracy * 100);
     p.score += bonus;
+    const isNewHighScore = p.score > highScore;
     updateHighScore(p.score);
-    if (message) message.innerText = `Game Over - Accuracy: ${(accuracy * 100).toFixed(0)}%`;
+    if (message) {
+        let msg = `Game Over <br/> Score: ${Math.floor(p.score)} <br/> Accuracy: ${(accuracy * 100).toFixed(0)}%`;
+        if (isNewHighScore) msg += ' <br/> ✨ New High Score! ✨';
+        message.innerHTML = msg;
+    }
     soundManager.play('gameOver');
     p.comboMultiplier = 1;
     p.lastKillTime = 0;
