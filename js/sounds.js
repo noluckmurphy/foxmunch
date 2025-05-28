@@ -1,6 +1,6 @@
 class SoundManager {
     constructor() {
-        const AudioCtor = typeof Audio !== 'undefined' ? Audio : function () { return { play() {}, load() {} }; };
+        const AudioCtor = typeof Audio !== 'undefined' ? Audio : function () { return { play() {}, load() {}, volume: 1 }; };
         this.sounds = {
             projectileShoot: new AudioCtor('../assets/sounds/projectile_shoot.mp3'),
             criticalProjectileShoot: new AudioCtor('../assets/sounds/critical_projectile_shoot.mp3'),
@@ -18,6 +18,15 @@ class SoundManager {
         // Pre-load all sounds
         Object.values(this.sounds).forEach(sound => {
             sound.load();
+        });
+
+        this.volume = 1;
+    }
+
+    setVolume(level) {
+        this.volume = Math.max(0, Math.min(level, 1));
+        Object.values(this.sounds).forEach(sound => {
+            sound.volume = this.volume;
         });
     }
 

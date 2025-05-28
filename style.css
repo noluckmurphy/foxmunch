@@ -48,6 +48,10 @@ body, html {
     border-radius: 10px;
 }
 
+#controlsLegend input[type="range"] {
+    width: 100px;
+}
+
 #pauseOverlay {
     position: absolute;
     top: 0;

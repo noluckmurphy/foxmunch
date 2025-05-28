@@ -17,6 +17,14 @@ const ctx = canvas.getContext ? canvas.getContext('2d') : null;
 const hud = typeof document !== 'undefined' ? document.getElementById('hud') : null;
 const message = typeof document !== 'undefined' ? document.getElementById('message') : null;
 const pauseOverlay = document.getElementById('pauseOverlay');
+const volumeSlider = typeof document !== 'undefined' ? document.getElementById('volumeSlider') : null;
+
+if (volumeSlider) {
+    soundManager.setVolume(parseFloat(volumeSlider.value));
+    volumeSlider.addEventListener('input', () => {
+        soundManager.setVolume(parseFloat(volumeSlider.value));
+    });
+}
 
 if (typeof window !== 'undefined') {
     canvas.width = window.innerWidth;
