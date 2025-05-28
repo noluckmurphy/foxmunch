@@ -86,8 +86,8 @@ export default class Player {
             const damage = isCritical ? 9 : 3;
 
             const projectile = new Projectile(
-                this.x + Math.cos(this.angle) * this.size,
-                this.y + Math.sin(this.angle) * this.size,
+                this.x,
+                this.y,
                 Math.cos(this.angle) * projectileSpeed,
                 Math.sin(this.angle) * projectileSpeed,
                 projectileSize,
@@ -124,6 +124,9 @@ export default class Player {
             if (soundManager) {
                 if (isCritical) soundManager.play('criticalBombDrop');
                 soundManager.play('bombDrop');
+            }
+            if (typeof window !== 'undefined' && window.triggerScreenShake) {
+                window.triggerScreenShake(8, 200);
             }
             this.bombCooldown = 3;
             this.bombs--;

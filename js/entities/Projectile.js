@@ -31,6 +31,32 @@ export default class Projectile {
         this.vx = this.initialVx * factor;
         this.vy = this.initialVy * factor;
 
+        for (let i = enemies.length - 1; i >= 0; i--) {
+            const enemy = enemies[i];
+            const dx = enemy.x - this.x;
+            const dy = enemy.y - this.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < enemy.size + this.size) {
+                enemy.hp -= this.damage;
+                if (player) player.shotsHit = (player.shotsHit || 0) + 1;
+                if (soundManager) soundManager.play('projectileHit');
+                if (enemy.hp <= 0) {
+                    if (soundManager) soundManager.play('enemyDeath');
+                    let baseScore = 0;
+                    if (enemy.type === 'small') baseScore = 10;
+                    else if (enemy.type === 'medium') baseScore = 30;
+                    else if (enemy.type === 'large') baseScore = 50;
+                    if (typeof player.addKillScore === 'function') {
+                        player.addKillScore(baseScore);
+                    } else {
+                        player.score += baseScore;
+                    }
+                    enemies.splice(i, 1);
+                }
+                return false;
+            }
+        }
+
         this.x += this.vx;
         this.y += this.vy;
 
