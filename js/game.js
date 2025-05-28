@@ -81,6 +81,7 @@ const player = new Player(canvas.width / 2, canvas.height / 2);
 // Arrays for game objects
 let enemies = [];
 let obstacles = [];
+let scenery = [];
 let projectiles = [];
 let bombs = [];
 let melees = [];
@@ -94,6 +95,7 @@ function init() {
     highScore = loadHighScore();
     player.score = 0;
     spawnObstacles();
+    spawnScenery();
     update(performance.now()); // Pass current time to update
 }
 
@@ -113,6 +115,7 @@ function update(time) {
     updatePlayer();
     updateEnemies();
     updateObstacles();
+    updateScenery();
     updateProjectiles();
     updateMelees();
     updateBombs();
@@ -148,6 +151,17 @@ function updateEnemies() {
 
 function updateObstacles() {
     // Obstacles are static in this implementation
+}
+
+function updateScenery() {
+    scenery.forEach((obj) => {
+        obj.x -= player.vx * 0.2;
+        obj.y -= player.vy * 0.2;
+        if (obj.x < 0) obj.x += canvas.width;
+        if (obj.x > canvas.width) obj.x -= canvas.width;
+        if (obj.y < 0) obj.y += canvas.height;
+        if (obj.y > canvas.height) obj.y -= canvas.height;
+    });
 }
 
 function updateMelees() {
@@ -306,6 +320,28 @@ function draw() {
 }
 
 function drawEnvironment() {
+    scenery.forEach((obj) => {
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#003300';
+        ctx.fillStyle = '#004d00';
+        if (obj.type === 'tree') {
+            ctx.beginPath();
+            ctx.moveTo(obj.x, obj.y - obj.size);
+            ctx.lineTo(obj.x - obj.size, obj.y + obj.size);
+            ctx.lineTo(obj.x + obj.size, obj.y + obj.size);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        } else {
+            ctx.beginPath();
+            ctx.arc(obj.x, obj.y, obj.size, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        }
+        ctx.restore();
+    });
+
     // Background is solid but occasionally emit subtle particles
     if (Math.random() < 0.02) {
         const x = Math.random() * canvas.width;
@@ -462,6 +498,17 @@ function spawnObstacles() {
             size: Math.random() * 20 + 10
         };
         obstacles.push(obstacle);
+    }
+}
+
+function spawnScenery() {
+    for (let i = 0; i < 25; i++) {
+        scenery.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 15 + 5,
+            type: Math.random() < 0.6 ? 'tree' : 'rock'
+        });
     }
 }
 
