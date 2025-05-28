@@ -6,6 +6,7 @@ import Bomb from "./entities/Bomb.js";
 import Melee from "./entities/Melee.js";
 import Particle from "./entities/Particle.js";
 import FloatingText from "./entities/FloatingText.js";
+import Star from "./entities/Star.js";
 import { inputManager } from './InputManager.js';
 
 
@@ -89,6 +90,7 @@ let bombs = [];
 let melees = [];
 let particles = [];
 let messages = [];
+let stars = [];
 
 function pushComboMessage(combo, x, y) {
     messages.push(new FloatingText(x, y - 30, `x${combo}!`, 1));
@@ -127,6 +129,7 @@ function update(time) {
     updateMelees();
     updateBombs();
     updateParticles();
+    updateStars();
     updateMessages();
 
     // Collision detection
@@ -140,6 +143,7 @@ function update(time) {
 
     // Spawn enemies
     spawnEnemies();
+    spawnStars();
 
     // Increase score over time
     player.score += deltaTime;
@@ -211,6 +215,14 @@ function updateParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
         if (!particles[i].update(deltaTime)) {
             particles.splice(i, 1);
+        }
+    }
+}
+
+function updateStars() {
+    for (let i = stars.length - 1; i >= 0; i--) {
+        if (!stars[i].update(deltaTime, player)) {
+            stars.splice(i, 1);
         }
     }
 }
@@ -340,6 +352,7 @@ function draw() {
     drawProjectiles();
     drawMelees();
     drawBombs();
+    drawStars();
     drawParticles();
     drawEnemies();
     drawMessages();
@@ -465,6 +478,10 @@ function drawBombs() {
     });
 }
 
+function drawStars() {
+    stars.forEach(star => star.draw(ctx));
+}
+
 function drawBomb(ctx, bomb) {
     ctx.save();
     ctx.globalAlpha = bomb.opacity;
@@ -521,6 +538,14 @@ function spawnEnemies() {
 
         let enemy = createEnemy(type);
         enemies.push(enemy);
+    }
+}
+
+function spawnStars() {
+    if (Math.random() < 0.01) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        stars.push(new Star(x, y));
     }
 }
 

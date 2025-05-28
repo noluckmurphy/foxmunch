@@ -43,6 +43,11 @@ export default class Melee {
                             particles.push(new Particle(enemy.x, enemy.y, Math.cos(a) * s, Math.sin(a) * s, 2, 0.5));
                         }
                     }
+                    if (enemy.type === 'large' && typeof player.bombs === 'number') {
+                        if (Math.random() < 0.15 && player.bombs < 5) {
+                            player.bombs += 1;
+                        }
+                    }
                     this.alreadyHit.add(enemy);
                     enemies.splice(i, 1);
                 }
