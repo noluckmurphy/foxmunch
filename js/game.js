@@ -163,8 +163,19 @@ function updateObstacles() {
 
 function updateScenery() {
     scenery.forEach((obj) => {
+        // Parallax movement in response to player motion
         obj.x -= player.vx * 0.2;
         obj.y -= player.vy * 0.2;
+
+        // Slow personal drift
+        obj.x += obj.vx;
+        obj.y += obj.vy;
+
+        // Oscillate size to make scenery feel alive
+        obj.scalePhase += obj.scaleSpeed;
+        obj.size = obj.baseSize + Math.sin(obj.scalePhase) * obj.scaleRange;
+
+        // Wrap around screen edges
         if (obj.x < 0) obj.x += canvas.width;
         if (obj.x > canvas.width) obj.x -= canvas.width;
         if (obj.y < 0) obj.y += canvas.height;
@@ -524,10 +535,17 @@ function spawnObstacles() {
 
 function spawnScenery() {
     for (let i = 0; i < 25; i++) {
+        const baseSize = Math.random() * 15 + 5;
         scenery.push({
             x: Math.random() * canvas.width,
             y: Math.random() * canvas.height,
-            size: Math.random() * 15 + 5,
+            vx: (Math.random() - 0.5) * 0.1, // slow drift
+            vy: (Math.random() - 0.5) * 0.1,
+            baseSize,
+            size: baseSize,
+            scaleRange: baseSize * 0.25,
+            scaleSpeed: Math.random() * 0.02 + 0.01,
+            scalePhase: Math.random() * Math.PI * 2,
             type: Math.random() < 0.6 ? 'tree' : 'rock'
         });
     }
