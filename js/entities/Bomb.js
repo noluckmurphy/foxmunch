@@ -13,7 +13,7 @@ export default class Bomb {
         this.hitEnemies = new Set();
     }
 
-    update(enemies, player) {
+    update(enemies, player, screenShakeCallback = null) {
         const now = performance.now();
         const elapsed = now - this.startTime;
         if (elapsed < this.durationExpand) {
@@ -34,6 +34,7 @@ export default class Bomb {
             if (distance < this.currentRadius + enemy.size && !this.hitEnemies.has(enemy)) {
                 enemy.hp -= this.damage;
                 this.hitEnemies.add(enemy);
+                if (screenShakeCallback) screenShakeCallback();
                 if (enemy.hp <= 0) {
                     let baseScore = 0;
                     if (enemy.type === 'small') baseScore = 10;
