@@ -406,6 +406,9 @@ function drawObstacles() {
         ctx.arc(obstacle.x, obstacle.y, obstacle.size, 0, Math.PI * 2);
         ctx.fillStyle = 'brown';
         ctx.fill();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = 'red';
+        ctx.stroke();
     });
 }
 
