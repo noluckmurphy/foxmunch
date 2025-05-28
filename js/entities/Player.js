@@ -26,6 +26,13 @@ export default class Player {
         this.meleeCooldown = 0;
         this.projectileCooldown = 0;
         this.bombCooldown = 0;
+
+        // Optional callback to display messages such as combo notifications
+        this.messageCallback = null;
+    }
+
+    setMessageCallback(cb) {
+        this.messageCallback = cb;
     }
 
     update(input, deltaTime, canvas, projectiles, melees, bombs, soundManager) {
@@ -135,8 +142,12 @@ export default class Player {
 
     addKillScore(baseScore) {
         const now = performance.now() / 1000;
+        const prevCombo = this.comboMultiplier;
         if (now - this.lastKillTime <= 3) {
             this.comboMultiplier += 1;
+            if (this.messageCallback && this.comboMultiplier > prevCombo) {
+                this.messageCallback(this.comboMultiplier, this.x, this.y);
+            }
         } else {
             this.comboMultiplier = 1;
         }
