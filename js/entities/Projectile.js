@@ -39,7 +39,15 @@ export default class Projectile {
             const dy = enemy.y - this.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
             if (distance < enemy.size + this.size) {
-                enemy.hp -= this.damage;
+                if (enemy.type === 'elite' && enemy.shield > 0) {
+                    enemy.shield -= this.damage;
+                    if (enemy.shield < 0) {
+                        enemy.hp += enemy.shield;
+                        enemy.shield = 0;
+                    }
+                } else {
+                    enemy.hp -= this.damage;
+                }
                 if (player) player.shotsHit = (player.shotsHit || 0) + 1;
                 if (soundManager) soundManager.play('projectileHit');
                 if (enemy.hp <= 0) {
@@ -48,6 +56,8 @@ export default class Projectile {
                     if (enemy.type === 'small') baseScore = 10;
                     else if (enemy.type === 'medium') baseScore = 30;
                     else if (enemy.type === 'large') baseScore = 50;
+                    else if (enemy.type === 'orbital') baseScore = 5;
+                    else if (enemy.type === 'elite') baseScore = 100;
                     if (typeof player.addKillScore === 'function') {
                         player.addKillScore(baseScore);
                     } else {

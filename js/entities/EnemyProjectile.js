@@ -1,17 +1,14 @@
-export default class Enemy {
-    constructor(x, y, size, hp, speed, damage, type, vx, vy) {
+export default class EnemyProjectile {
+    constructor(x, y, vx, vy, size, damage) {
         this.x = x;
         this.y = y;
-        this.size = size;
-        this.hp = hp;
-        this.speed = speed;
-        this.damage = damage;
-        this.type = type;
         this.vx = vx;
         this.vy = vy;
+        this.size = size;
+        this.damage = damage;
     }
 
-    update(canvas, _enemyProjectiles = null) {
+    update(canvas) {
         this.x += this.vx;
         this.y += this.vy;
         if (

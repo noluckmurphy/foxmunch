@@ -27,24 +27,35 @@ export default class Melee {
                 const angleToEnemy = Math.atan2(dy, dx);
                 const angleDiff = Math.abs(normalizeAngle(angleToEnemy - this.angle));
                 if (angleDiff <= Math.PI / 3) {
-                    let baseScore = 0;
-                    if (enemy.type === 'small') baseScore = 10;
-                    else if (enemy.type === 'medium') baseScore = 30;
-                    else if (enemy.type === 'large') baseScore = 50;
-                    if (typeof player.addKillScore === 'function') {
-                        player.addKillScore(baseScore);
-                    } else {
-                        player.score += baseScore;
-                    }
-                    if (particles) {
-                        for (let j = 0; j < 6; j++) {
-                            const a = Math.random() * Math.PI * 2;
-                            const s = Math.random() * 2 + 1;
-                            particles.push(new Particle(enemy.x, enemy.y, Math.cos(a) * s, Math.sin(a) * s, 2, 0.5));
+                    if (enemy.type === 'elite' && enemy.shield > 0) {
+                        enemy.shield -= 10;
+                        if (enemy.shield < 0) {
+                            enemy.hp += enemy.shield;
+                            enemy.shield = 0;
                         }
+                        this.alreadyHit.add(enemy);
+                    } else {
+                        let baseScore = 0;
+                        if (enemy.type === 'small') baseScore = 10;
+                        else if (enemy.type === 'medium') baseScore = 30;
+                        else if (enemy.type === 'large') baseScore = 50;
+                        else if (enemy.type === 'orbital') baseScore = 5;
+                        else if (enemy.type === 'elite') baseScore = 100;
+                        if (typeof player.addKillScore === 'function') {
+                            player.addKillScore(baseScore);
+                        } else {
+                            player.score += baseScore;
+                        }
+                        if (particles) {
+                            for (let j = 0; j < 6; j++) {
+                                const a = Math.random() * Math.PI * 2;
+                                const s = Math.random() * 2 + 1;
+                                particles.push(new Particle(enemy.x, enemy.y, Math.cos(a) * s, Math.sin(a) * s, 2, 0.5));
+                            }
+                        }
+                        this.alreadyHit.add(enemy);
+                        enemies.splice(i, 1);
                     }
-                    this.alreadyHit.add(enemy);
-                    enemies.splice(i, 1);
                 }
             }
         }
