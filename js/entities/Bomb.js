@@ -1,3 +1,5 @@
+import Particle from './Particle.js';
+
 export default class Bomb {
     constructor(x, y, critical = false) {
         this.x = x;
@@ -13,7 +15,7 @@ export default class Bomb {
         this.hitEnemies = new Set();
     }
 
-    update(enemies, player) {
+    update(enemies, player, particles) {
         const now = performance.now();
         const elapsed = now - this.startTime;
         if (elapsed < this.durationExpand) {
@@ -43,6 +45,13 @@ export default class Bomb {
                         player.addKillScore(baseScore);
                     } else {
                         player.score += baseScore;
+                    }
+                    if (particles) {
+                        for (let j = 0; j < 12; j++) {
+                            const a = Math.random() * Math.PI * 2;
+                            const s = Math.random() * 3 + 1;
+                            particles.push(new Particle(enemy.x, enemy.y, Math.cos(a) * s, Math.sin(a) * s, 3, 0.8));
+                        }
                     }
                     enemies.splice(i, 1);
                 }

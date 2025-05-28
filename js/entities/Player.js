@@ -86,8 +86,8 @@ export default class Player {
             const damage = isCritical ? 9 : 3;
 
             const projectile = new Projectile(
-                this.x + Math.cos(this.angle) * this.size,
-                this.y + Math.sin(this.angle) * this.size,
+                this.x,
+                this.y,
                 Math.cos(this.angle) * projectileSpeed,
                 Math.sin(this.angle) * projectileSpeed,
                 projectileSize,

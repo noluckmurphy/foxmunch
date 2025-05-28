@@ -1,3 +1,5 @@
+import Particle from './Particle.js';
+
 export default class Projectile {
     constructor(x, y, vx, vy, size, damage, angle) {
         this.x = x;
@@ -10,7 +12,7 @@ export default class Projectile {
         this.initialized = false;
     }
 
-    update(canvas, enemies, player, soundManager) {
+    update(canvas, enemies, player, soundManager, particles) {
         const now = performance.now();
         if (!this.initialized) {
             this.initialized = true;
@@ -30,13 +32,6 @@ export default class Projectile {
         let factor = elapsed < 1 ? 1 - this.decayRate * elapsed : 1 - this.decayRate;
         this.vx = this.initialVx * factor;
         this.vy = this.initialVy * factor;
-
-        this.x += this.vx;
-        this.y += this.vy;
-
-        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
-            return false;
-        }
 
         for (let i = enemies.length - 1; i >= 0; i--) {
             const enemy = enemies[i];
@@ -58,10 +53,24 @@ export default class Projectile {
                     } else {
                         player.score += baseScore;
                     }
+                    if (particles) {
+                        for (let j = 0; j < 8; j++) {
+                            const a = Math.random() * Math.PI * 2;
+                            const s = Math.random() * 2 + 1;
+                            particles.push(new Particle(enemy.x, enemy.y, Math.cos(a) * s, Math.sin(a) * s, 2, 0.6));
+                        }
+                    }
                     enemies.splice(i, 1);
                 }
                 return false;
             }
+        }
+
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
+            return false;
         }
 
         return true;

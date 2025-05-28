@@ -1,4 +1,5 @@
 import { normalizeAngle } from '../utils.js';
+import Particle from './Particle.js';
 
 export default class Melee {
     constructor(x, y, angle, range = 50, duration = 0.05) {
@@ -11,7 +12,7 @@ export default class Melee {
         this.alreadyHit = new Set();
     }
 
-    update(enemies, player) {
+    update(enemies, player, particles) {
         const currentTime = performance.now() / 1000;
         if (currentTime - this.startTime > this.duration) {
             return false;
@@ -34,6 +35,13 @@ export default class Melee {
                         player.addKillScore(baseScore);
                     } else {
                         player.score += baseScore;
+                    }
+                    if (particles) {
+                        for (let j = 0; j < 6; j++) {
+                            const a = Math.random() * Math.PI * 2;
+                            const s = Math.random() * 2 + 1;
+                            particles.push(new Particle(enemy.x, enemy.y, Math.cos(a) * s, Math.sin(a) * s, 2, 0.5));
+                        }
                     }
                     this.alreadyHit.add(enemy);
                     enemies.splice(i, 1);
