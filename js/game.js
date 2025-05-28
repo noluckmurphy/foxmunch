@@ -5,6 +5,7 @@ import Projectile from "./entities/Projectile.js";
 import Bomb from "./entities/Bomb.js";
 import Melee from "./entities/Melee.js";
 import Particle from "./entities/Particle.js";
+import FloatingText from "./entities/FloatingText.js";
 import { inputManager } from './InputManager.js';
 
 
@@ -78,6 +79,7 @@ function updateHighScore(score) {
 
 // Player object
 const player = new Player(canvas.width / 2, canvas.height / 2);
+player.setMessageCallback(pushComboMessage);
 // Arrays for game objects
 let enemies = [];
 let obstacles = [];
@@ -85,6 +87,11 @@ let projectiles = [];
 let bombs = [];
 let melees = [];
 let particles = [];
+let messages = [];
+
+function pushComboMessage(combo, x, y) {
+    messages.push(new FloatingText(x, y - 30, `x${combo}!`, 1));
+}
 
 // Initialize game
 function init() {
@@ -117,6 +124,7 @@ function update(time) {
     updateMelees();
     updateBombs();
     updateParticles();
+    updateMessages();
 
     // Collision detection
     checkCollisions();
@@ -178,6 +186,14 @@ function updateParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
         if (!particles[i].update(deltaTime)) {
             particles.splice(i, 1);
+        }
+    }
+}
+
+function updateMessages() {
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (!messages[i].update(deltaTime)) {
+            messages.splice(i, 1);
         }
     }
 }
@@ -301,6 +317,7 @@ function draw() {
     drawBombs();
     drawParticles();
     drawEnemies();
+    drawMessages();
 
     ctx.restore();
 }
@@ -418,6 +435,10 @@ function drawBomb(ctx, bomb) {
 
 function drawParticles() {
     particles.forEach(p => p.draw(ctx));
+}
+
+function drawMessages() {
+    messages.forEach(m => m.draw(ctx));
 }
 
 function updateHUD() {
