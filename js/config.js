@@ -13,6 +13,6 @@ export const PLAYER_DEFAULTS = {
 export const BOMB_DEFAULTS = {
     durationExpand: 200,
     durationFade: 500,
-    radius: { normal: 100, critical: 200 },
-    damage: { normal: 20, critical: 100 }
+    radius: { normal: 150, critical: 300 },
+    damage: { normal: 40, critical: 200 }
 };
