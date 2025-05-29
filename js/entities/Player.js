@@ -20,7 +20,7 @@ export default class Player {
         this.acceleration = 0.2;
         this.deceleration = 0.05;
         this.hp = 100;
-        this.acorns = 100;
+        this.acorns = 200;
         this.bombs = 5;
         this.lives = 3;
         this.score = 0;
