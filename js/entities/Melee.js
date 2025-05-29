@@ -16,7 +16,7 @@ export default class Melee {
         this.hasRegisteredHit = false;
     }
 
-    update(enemies, player, particles) {
+    update(enemies, player, particles, soundManager = null) {
         const currentTime = performance.now() / 1000;
         if (currentTime - this.startTime > this.duration) {
             if (!this.hasRegisteredHit && player && typeof player.registerMeleeMiss === 'function') {
@@ -62,6 +62,7 @@ export default class Melee {
                     if (enemy instanceof SquareEnemy) {
                         SquareEnemy.split(enemy, enemies);
                     }
+                    if (soundManager) soundManager.play('enemyDeath');
                     spawnDeathParticles(enemy, particles);
                     this.alreadyHit.add(enemy);
                     enemies.splice(i, 1);
