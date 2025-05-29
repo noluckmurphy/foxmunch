@@ -46,7 +46,7 @@ export default class Bomb {
             const dx = enemy.x - this.x;
             const dy = enemy.y - this.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            if (distance < this.currentRadius + enemy.size && !this.hitEnemies.has(enemy)) {
+            if (distance <= this.currentRadius + enemy.size && !this.hitEnemies.has(enemy)) {
                 if (enemy.type === 'elite' && enemy.shield > 0) {
                     enemy.shield -= this.damage;
                     if (enemy.shield < 0) {
