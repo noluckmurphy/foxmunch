@@ -24,7 +24,7 @@ export default class Bomb {
     }
 
 
-    update(enemies, player, particles, screenShakeCallback = null) {
+    update(enemies, player, particles, screenShakeCallback = null, soundManager = null) {
         const now = performance.now();
         const elapsed = now - this.startTime;
         if (elapsed < this.durationExpand) {
@@ -73,6 +73,7 @@ export default class Bomb {
                     if (enemy instanceof SquareEnemy) {
                         SquareEnemy.split(enemy, enemies);
                     }
+                    if (soundManager) soundManager.play('enemyDeath');
                     spawnDeathParticles(enemy, particles);
                     enemies.splice(i, 1);
                 }

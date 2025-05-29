@@ -268,7 +268,7 @@ function updateScenery() {
 
 function updateMelees() {
     for (let i = melees.length - 1; i >= 0; i--) {
-        if (!melees[i].update(enemies, player, particles)) {
+        if (!melees[i].update(enemies, player, particles, soundManager)) {
             melees.splice(i, 1);
         }
     }
@@ -284,7 +284,7 @@ function updateProjectiles() {
 
 function updateBombs() {
     for (let i = bombs.length - 1; i >= 0; i--) {
-        if (!bombs[i].update(enemies, player, particles, () => triggerScreenShake(8, 150))) {
+        if (!bombs[i].update(enemies, player, particles, () => triggerScreenShake(8, 150), soundManager)) {
             bombs.splice(i, 1);
         }
     }
@@ -394,6 +394,7 @@ function checkCollisions() {
                 if (enemy instanceof SquareEnemy) {
                     SquareEnemy.split(enemy, enemies);
                 }
+                soundManager.play('enemyDeath');
                 spawnDeathParticles(enemy, particles);
                 enemies.splice(index, 1);
             }
