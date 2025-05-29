@@ -8,6 +8,7 @@ export const BASE_PROJECTILE_COOLDOWN = 0.05;
 export const POWERUP_DURATION = 5;
 export const RAPID_FIRE_RATE_INCREASE = 2;
 export const SPEED_RATE_INCREASE = 1.5;
+
 export default class Player {
     constructor(x, y) {
         this.x = x;
