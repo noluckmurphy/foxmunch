@@ -102,6 +102,14 @@ let messages = [];
 let enemyProjectiles = [];
 let stars = [];
 let nextEliteSpawn = performance.now() / 1000 + 60 + Math.random() * 120;
+let gameStartTime = performance.now() / 1000;
+
+// Difficulty scaling configuration
+const baseSpawnChance = 0.02;
+const spawnChanceGrowth = 0.00004; // increase per second
+const maxSpawnChance = 0.08;
+const breatherInterval = 45; // seconds between breathers
+const breatherDuration = 5;  // seconds each breather lasts
 
 
 
@@ -601,23 +609,41 @@ function updateHUD() {
     `;
 }
 
+function difficultyElapsed() {
+    return performance.now() / 1000 - gameStartTime;
+}
+
+function currentSpawnChance() {
+    const elapsed = difficultyElapsed();
+    let chance = baseSpawnChance + elapsed * spawnChanceGrowth;
+    if (chance > maxSpawnChance) chance = maxSpawnChance;
+    const cyclePos = elapsed % breatherInterval;
+    if (cyclePos < breatherDuration) {
+        chance *= 0.3; // brief breather
+    }
+    return chance;
+}
+
+function enemyScale() {
+    return 1 + difficultyElapsed() / 120;
+}
+
 function spawnEnemies() {
-    // Spawn logic based on proportions
     const now = performance.now() / 1000;
     if (now >= nextEliteSpawn) {
-        const elite = createEliteEnemy();
+        const elite = createEliteEnemy(enemyScale());
         enemies.push(elite);
         elite.createOrbitals(enemies, enemyProjectiles);
         nextEliteSpawn = now + 60 + Math.random() * 120;
     }
-    if (Math.random() < 0.02) {
+    if (Math.random() < currentSpawnChance()) {
         let rand = Math.random();
         let type;
         if (rand < 0.5) type = 'small';
         else if (rand < 0.8) type = 'medium';
         else type = 'large';
 
-        let enemy = createEnemy(type);
+        let enemy = createEnemy(type, enemyScale());
         enemies.push(enemy);
     }
 }
@@ -660,7 +686,7 @@ function spawnScenery() {
     }
 }
 
-function createEnemy(type) {
+function createEnemy(type, scale = 1) {
     let size, hp, speed, damage;
     switch (type) {
         case 'small':
@@ -682,6 +708,11 @@ function createEnemy(type) {
             damage = 25;
             break;
     }
+
+    // Scale stats based on current difficulty
+    hp = Math.ceil(hp * scale);
+    damage = Math.ceil(damage * scale);
+    speed *= 1 + (scale - 1) * 0.5;
 
     // Random side to spawn from
     let side = Math.floor(Math.random() * 4);
@@ -710,7 +741,7 @@ function createEnemy(type) {
     return new Enemy(x, y, size, hp, speed, damage, type, Math.cos(angle) * speed, Math.sin(angle) * speed);
 }
 
-function createEliteEnemy() {
+function createEliteEnemy(scale = 1) {
     let size = 84;
     let hp = 52;
     let speed = 0.5 + Math.random();
@@ -726,9 +757,16 @@ function createEliteEnemy() {
     }
 
     const angle = Math.atan2(player.y - y, player.x - x);
-    const vx = Math.cos(angle) * speed;
-    const vy = Math.sin(angle) * speed;
-    return new EliteEnemy(x, y, vx, vy);
+    let vx = Math.cos(angle) * speed;
+    let vy = Math.sin(angle) * speed;
+    const elite = new EliteEnemy(x, y, vx, vy);
+
+    elite.hp = Math.ceil(elite.hp * scale);
+    elite.damage = Math.ceil(elite.damage * scale);
+    elite.vx *= 1 + (scale - 1) * 0.5;
+    elite.vy *= 1 + (scale - 1) * 0.5;
+    elite.speed = Math.sqrt(elite.vx * elite.vx + elite.vy * elite.vy);
+    return elite;
 }
 
 function respawnPlayer() {
