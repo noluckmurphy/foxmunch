@@ -4,19 +4,24 @@ import { spawnDeathParticles } from './Enemy.js';
 import SquareEnemy from './SquareEnemy.js';
 
 export default class Melee {
-    constructor(x, y, angle, range = 50, duration = 0.05) {
+    constructor(x, y, angle, range = 50, duration = 0.05, isCritical = false) {
         this.x = x;
         this.y = y;
         this.angle = angle;
-        this.range = range;
+        this.range = isCritical ? range * 3 : range;
         this.duration = duration;
         this.startTime = performance.now() / 1000;
         this.alreadyHit = new Set();
+        this.isCritical = isCritical;
+        this.hasRegisteredHit = false;
     }
 
     update(enemies, player, particles) {
         const currentTime = performance.now() / 1000;
         if (currentTime - this.startTime > this.duration) {
+            if (!this.hasRegisteredHit && player && typeof player.registerMeleeMiss === 'function') {
+                player.registerMeleeMiss();
+            }
             return false;
         }
         for (let i = enemies.length - 1; i >= 0; i--) {
@@ -60,6 +65,10 @@ export default class Melee {
                     spawnDeathParticles(enemy, particles);
                     this.alreadyHit.add(enemy);
                     enemies.splice(i, 1);
+                    if (!this.hasRegisteredHit && player && typeof player.registerMeleeHit === 'function') {
+                        player.registerMeleeHit(this.isCritical);
+                        this.hasRegisteredHit = true;
+                    }
                 }
             }
         }
