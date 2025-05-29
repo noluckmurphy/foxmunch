@@ -17,6 +17,9 @@ const hud = typeof document !== 'undefined' ? document.getElementById('hud') : n
 const message = typeof document !== 'undefined' ? document.getElementById('message') : null;
 const pauseOverlay = document.getElementById('pauseOverlay');
 const volumeSlider = typeof document !== 'undefined' ? document.getElementById('volumeSlider') : null;
+const gamepadIndicator = typeof document !== 'undefined' ? document.getElementById('gamepadIndicator') : null;
+const settingsScreen = typeof document !== 'undefined' ? document.getElementById('settingsScreen') : null;
+let settingsInputs = null;
 
 if (volumeSlider) {
     soundManager.setVolume(parseFloat(volumeSlider.value));
@@ -32,6 +35,39 @@ if (typeof window !== 'undefined') {
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
     });
+
+    if (settingsScreen) {
+        settingsInputs = {
+            axisX: document.getElementById('axisX'),
+            axisY: document.getElementById('axisY'),
+            shoot: document.getElementById('shootButton'),
+            melee: document.getElementById('meleeButton'),
+            bomb: document.getElementById('bombButton'),
+            pause: document.getElementById('pauseButton'),
+            settings: document.getElementById('settingsButton'),
+            save: document.getElementById('saveSettings')
+        };
+        const cfg = inputManager.getConfig();
+        settingsInputs.axisX.value = cfg.axisX;
+        settingsInputs.axisY.value = cfg.axisY;
+        settingsInputs.shoot.value = cfg.shoot;
+        settingsInputs.melee.value = cfg.melee;
+        settingsInputs.bomb.value = cfg.bomb;
+        settingsInputs.pause.value = cfg.pause;
+        settingsInputs.settings.value = cfg.settings;
+        settingsInputs.save.addEventListener('click', () => {
+            inputManager.setConfig({
+                axisX: parseInt(settingsInputs.axisX.value, 10) || 0,
+                axisY: parseInt(settingsInputs.axisY.value, 10) || 1,
+                shoot: parseInt(settingsInputs.shoot.value, 10) || 0,
+                melee: parseInt(settingsInputs.melee.value, 10) || 2,
+                bomb: parseInt(settingsInputs.bomb.value, 10) || 1,
+                pause: parseInt(settingsInputs.pause.value, 10) || 9,
+                settings: parseInt(settingsInputs.settings.value, 10) || 8,
+            });
+            settingsScreen.style.display = 'none';
+        });
+    }
 }
 
 // Game variables
@@ -41,15 +77,8 @@ let gameRunning = true;
 let gamePaused = false;
 let highScore = 0;
 
-// Toggle pause on "P" key press
-if (typeof window !== 'undefined') {
-    window.addEventListener('keydown', (e) => {
-        if (e.key.toLowerCase() === 'p') {
-            gamePaused = !gamePaused;
-            if (pauseOverlay) pauseOverlay.style.display = gamePaused ? 'flex' : 'none';
-        }
-    });
-}
+let prevPauseKey = false;
+let prevSettingsKey = false;
 
 let shakeDuration = 0;
 let shakeIntensity = 0;
@@ -138,6 +167,21 @@ function update(time) {
 
     deltaTime = (time - lastTime) / 1000;
     lastTime = time;
+
+    inputManager.pollGamepads();
+
+    const pausePressed = inputManager.isPressed('p');
+    if (pausePressed && !prevPauseKey) {
+        gamePaused = !gamePaused;
+        if (pauseOverlay) pauseOverlay.style.display = gamePaused ? 'flex' : 'none';
+    }
+    prevPauseKey = pausePressed;
+
+    const settingsPressed = inputManager.isPressed('`');
+    if (settingsPressed && !prevSettingsKey && settingsScreen) {
+        settingsScreen.style.display = settingsScreen.style.display === 'block' ? 'none' : 'block';
+    }
+    prevSettingsKey = settingsPressed;
 
     if (gamePaused) return;
 
