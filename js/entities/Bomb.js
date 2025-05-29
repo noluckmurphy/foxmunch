@@ -1,5 +1,6 @@
 import Particle from './Particle.js';
 import { spawnDeathParticles } from './Enemy.js';
+import SquareEnemy from './SquareEnemy.js';
 
 export default class Bomb {
     constructor(x, y, critical = false) {
@@ -58,15 +59,18 @@ export default class Bomb {
                 if (screenShakeCallback) screenShakeCallback();
                 if (enemy.hp <= 0) {
                     let baseScore = 0;
-                    if (enemy.type === 'small') baseScore = 10;
-                    else if (enemy.type === 'medium') baseScore = 30;
-                    else if (enemy.type === 'large') baseScore = 50;
+                    if (enemy.type === 'small' || enemy.type === 'square_small') baseScore = 10;
+                    else if (enemy.type === 'medium' || enemy.type === 'square_medium') baseScore = 30;
+                    else if (enemy.type === 'large' || enemy.type === 'square_large') baseScore = 50;
                     else if (enemy.type === 'orbital') baseScore = 5;
                     else if (enemy.type === 'elite') baseScore = 100;
                     if (typeof player.addKillScore === 'function') {
                         player.addKillScore(baseScore);
                     } else {
                         player.score += baseScore;
+                    }
+                    if (enemy instanceof SquareEnemy) {
+                        SquareEnemy.split(enemy, enemies);
                     }
                     spawnDeathParticles(enemy, particles);
                     enemies.splice(i, 1);

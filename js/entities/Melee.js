@@ -1,6 +1,7 @@
 import { normalizeAngle } from '../utils.js';
 import Particle from './Particle.js';
 import { spawnDeathParticles } from './Enemy.js';
+import SquareEnemy from './SquareEnemy.js';
 
 export default class Melee {
     constructor(x, y, angle, range = 50, duration = 0.05) {
@@ -37,9 +38,9 @@ export default class Melee {
                         this.alreadyHit.add(enemy);
                     } else {
                         let baseScore = 0;
-                        if (enemy.type === 'small') baseScore = 10;
-                        else if (enemy.type === 'medium') baseScore = 30;
-                        else if (enemy.type === 'large') baseScore = 50;
+                        if (enemy.type === 'small' || enemy.type === 'square_small') baseScore = 10;
+                        else if (enemy.type === 'medium' || enemy.type === 'square_medium') baseScore = 30;
+                        else if (enemy.type === 'large' || enemy.type === 'square_large') baseScore = 50;
                         else if (enemy.type === 'orbital') baseScore = 5;
                         else if (enemy.type === 'elite') baseScore = 100;
                         if (typeof player.addKillScore === 'function') {
@@ -52,6 +53,9 @@ export default class Melee {
                         if (Math.random() < 0.15 && player.bombs < 5) {
                             player.bombs += 1;
                         }
+                    }
+                    if (enemy instanceof SquareEnemy) {
+                        SquareEnemy.split(enemy, enemies);
                     }
                     spawnDeathParticles(enemy, particles);
                     this.alreadyHit.add(enemy);
