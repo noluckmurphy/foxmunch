@@ -36,6 +36,7 @@ export default class Player {
         this.shieldTimer = 0;
         this.rapidFireTimer = 0;
         this.speedBoostTimer = 0;
+        this.meleeHitStreak = 0;
 
         // Optional callback to display messages such as combo notifications
         this.messageCallback = null;
@@ -43,6 +44,23 @@ export default class Player {
 
     setMessageCallback(cb) {
         this.messageCallback = cb;
+    }
+
+    getMeleeCritChance() {
+        const base = 0.02;
+        return Math.min(1, base * Math.pow(1.4, this.meleeHitStreak));
+    }
+
+    registerMeleeHit(isCritical) {
+        if (isCritical) {
+            this.meleeHitStreak = 0;
+        } else {
+            this.meleeHitStreak += 1;
+        }
+    }
+
+    registerMeleeMiss() {
+        this.meleeHitStreak = 0;
     }
 
     update(input, deltaTime, canvas, projectiles, melees, bombs, soundManager) {
@@ -127,7 +145,9 @@ export default class Player {
 
     performMeleeAttack(melees, soundManager) {
         if (this.meleeCooldown <= 0) {
-            melees.push(new Melee(this.x, this.y, this.angle));
+            const isCritical = Math.random() < this.getMeleeCritChance();
+            melees.push(new Melee(this.x, this.y, this.angle, 50, 0.05, isCritical));
+            if (isCritical) this.meleeHitStreak = 0;
             if (soundManager) soundManager.play('meleeAttack');
             this.meleeCooldown = 0.5;
         }
