@@ -2,6 +2,11 @@ import Projectile from './Projectile.js';
 import Bomb from './Bomb.js';
 import Melee from './Melee.js';
 
+export const SHIELD_DURATION = 5;
+export const BASE_PROJECTILE_COOLDOWN = 0.05;
+export const POWERUP_DURATION = 5;
+export const RAPID_FIRE_RATE_INCREASE = 2;
+export const SPEED_RATE_INCREASE = 1.5;
 export default class Player {
     constructor(x, y) {
         this.x = x;
@@ -26,6 +31,9 @@ export default class Player {
         this.meleeCooldown = 0;
         this.projectileCooldown = 0;
         this.bombCooldown = 0;
+        this.shieldTimer = 0;
+        this.rapidFireTimer = 0;
+        this.speedBoostTimer = 0;
 
         // Optional callback to display messages such as combo notifications
         this.messageCallback = null;
@@ -43,17 +51,18 @@ export default class Player {
         if (input.isPressed('arrowleft')) dx -= 1;
         if (input.isPressed('arrowright')) dx += 1;
 
+        const speedMult = this.speedBoostTimer > 0 ? SPEED_RATE_INCREASE : 1;
         if (dx !== 0 || dy !== 0) {
             const direction = Math.atan2(dy, dx);
             this.angle = direction;
 
-            this.vx += Math.cos(direction) * this.acceleration;
-            this.vy += Math.sin(direction) * this.acceleration;
+            this.vx += Math.cos(direction) * this.acceleration * speedMult;
+            this.vy += Math.sin(direction) * this.acceleration * speedMult;
 
             const speed = Math.sqrt(this.vx * this.vx + this.vy * this.vy);
-            if (speed > this.maxSpeed) {
-                this.vx *= this.maxSpeed / speed;
-                this.vy *= this.maxSpeed / speed;
+            if (speed > this.maxSpeed * speedMult) {
+                this.vx *= this.maxSpeed * speedMult / speed;
+                this.vy *= this.maxSpeed * speedMult / speed;
             }
         } else {
             this.vx *= (1 - this.deceleration);
@@ -81,6 +90,9 @@ export default class Player {
         if (this.projectileCooldown > 0) this.projectileCooldown -= deltaTime;
         if (this.meleeCooldown > 0) this.meleeCooldown -= deltaTime;
         if (this.bombCooldown > 0) this.bombCooldown -= deltaTime;
+        if (this.shieldTimer > 0) this.shieldTimer -= deltaTime;
+        if (this.rapidFireTimer > 0) this.rapidFireTimer -= deltaTime;
+        if (this.speedBoostTimer > 0) this.speedBoostTimer -= deltaTime;
     }
 
     shootProjectile(projectiles, soundManager) {
@@ -104,7 +116,8 @@ export default class Player {
             projectiles.push(projectile);
             if (soundManager)
                 soundManager.play(isCritical ? 'criticalProjectileShoot' : 'projectileShoot');
-            this.projectileCooldown = 0.05;
+            const rate = this.rapidFireTimer > 0 ? RAPID_FIRE_RATE_INCREASE : 1;
+            this.projectileCooldown = BASE_PROJECTILE_COOLDOWN / rate;
             this.acorns--;
             this.shotsFired++;
         }
