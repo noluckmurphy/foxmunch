@@ -14,6 +14,7 @@ import RapidFirePowerUp from "./entities/RapidFirePowerUp.js";
 import SpeedBoostPowerUp from "./entities/SpeedBoostPowerUp.js";
 import Star from "./entities/Star.js";
 import { inputManager } from './InputManager.js';
+import { isClearOfObstacles } from './spawnUtils.js';
 
 
 const canvas = typeof document !== 'undefined' ? document.getElementById('gameCanvas') : { getContext: () => null };
@@ -749,33 +750,53 @@ function spawnEnemies() {
     }
 }
 
+
 function spawnStars() {
     if (Math.random() < 0.01) {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
-        stars.push(new Star(x, y));
+        for (let i = 0; i < 10; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            if (isClearOfObstacles(x, y, 8, 3)) {
+                stars.push(new Star(x, y));
+                break;
+            }
+        }
     }
 }
 
 function spawnPowerUps() {
     if (Math.random() < 0.003) {
-        const x = Math.random() * canvas.width;
-        const y = Math.random() * canvas.height;
-        const r = Math.random();
-        if (r < 0.33) powerUps.push(new ShieldPowerUp(x, y));
-        else if (r < 0.66) powerUps.push(new RapidFirePowerUp(x, y));
-        else powerUps.push(new SpeedBoostPowerUp(x, y));
+        for (let i = 0; i < 10; i++) {
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            if (isClearOfObstacles(x, y, 8, 3)) {
+                const r = Math.random();
+                if (r < 0.33) powerUps.push(new ShieldPowerUp(x, y));
+                else if (r < 0.66) powerUps.push(new RapidFirePowerUp(x, y));
+                else powerUps.push(new SpeedBoostPowerUp(x, y));
+                break;
+            }
+        }
     }
 }
 
 function spawnObstacles() {
     // Randomly place obstacles
     for (let i = 0; i < 50; i++) {
-        let obstacle = {
-            x: Math.random() * canvas.width,
-            y: Math.random() * canvas.height,
-            size: Math.random() * 20 + 10
-        };
+        let obstacle;
+        let attempts = 0;
+        do {
+            obstacle = {
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 20 + 10
+            };
+            attempts++;
+        } while (
+            attempts < 20 &&
+            Math.hypot(obstacle.x - canvas.width / 2, obstacle.y - canvas.height / 2) <
+                obstacle.size + player.size + 5
+        );
         obstacles.push(obstacle);
     }
 }
