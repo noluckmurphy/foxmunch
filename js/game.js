@@ -298,6 +298,8 @@ function updateEnemyProjectiles() {
             enemyProjectiles.splice(i, 1);
             continue;
         }
+
+        // Check collision with player
         const dx = player.x - p.x;
         const dy = player.y - p.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
@@ -317,6 +319,47 @@ function updateEnemyProjectiles() {
                 }
             }
             enemyProjectiles.splice(i, 1);
+            continue;
+        }
+
+        // Check collision with other enemies
+        for (let j = enemies.length - 1; j >= 0; j--) {
+            const enemy = enemies[j];
+            const enemyDx = enemy.x - p.x;
+            const enemyDy = enemy.y - p.y;
+            const enemyDistance = Math.sqrt(enemyDx * enemyDx + enemyDy * enemyDy);
+            if (enemyDistance < p.size + enemy.size) {
+                if (enemy.type === 'elite' && enemy.shield > 0) {
+                    enemy.shield -= p.damage;
+                    if (enemy.shield < 0) {
+                        enemy.hp += enemy.shield;
+                        enemy.shield = 0;
+                    }
+                } else {
+                    enemy.hp -= p.damage;
+                }
+                if (enemy.hp <= 0) {
+                    let baseScore = 0;
+                    if (enemy.type === 'small' || enemy.type === 'square_small') baseScore = 10;
+                    else if (enemy.type === 'medium' || enemy.type === 'square_medium') baseScore = 30;
+                    else if (enemy.type === 'large' || enemy.type === 'square_large') baseScore = 50;
+                    else if (enemy.type === 'orbital') baseScore = 5;
+                    else if (enemy.type === 'elite') baseScore = 100;
+                    if (typeof player.addKillScore === 'function') {
+                        player.addKillScore(baseScore);
+                    } else {
+                        player.score += baseScore;
+                    }
+                    if (enemy instanceof SquareEnemy) {
+                        SquareEnemy.split(enemy, enemies);
+                    }
+                    if (soundManager) soundManager.play('enemyDeath');
+                    spawnDeathParticles(enemy, particles);
+                    enemies.splice(j, 1);
+                }
+                enemyProjectiles.splice(i, 1);
+                break;
+            }
         }
     }
 }
