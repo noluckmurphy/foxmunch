@@ -24,11 +24,18 @@ body, html {
     font-size: 16px;
 }
 
-#message {
+#messageContainer {
     position: absolute;
     top: 40%;
     left: 50%;
     transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 100;
+}
+
+#message {
     color: white;
     font-family: Arial, sans-serif;
     font-weight: bold;
@@ -38,10 +45,7 @@ body, html {
 }
 
 #newGameButton {
-    position: absolute;
-    top: 60%;
-    left: 50%;
-    transform: translate(-50%, -50%);
+    margin-top: 20px;
     padding: 10px 20px;
     font-size: 24px;
     display: none;
