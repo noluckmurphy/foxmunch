@@ -18,6 +18,7 @@ const canvas = typeof document !== 'undefined' ? document.getElementById('gameCa
 const ctx = canvas.getContext ? canvas.getContext('2d') : null;
 const hud = typeof document !== 'undefined' ? document.getElementById('hud') : null;
 const message = typeof document !== 'undefined' ? document.getElementById('message') : null;
+const newGameButton = typeof document !== 'undefined' ? document.getElementById('newGameButton') : null;
 const pauseOverlay = document.getElementById('pauseOverlay');
 const volumeSlider = typeof document !== 'undefined' ? document.getElementById('volumeSlider') : null;
 const gamepadIndicator = typeof document !== 'undefined' ? document.getElementById('gamepadIndicator') : null;
@@ -70,6 +71,10 @@ if (typeof window !== 'undefined') {
             });
             settingsScreen.style.display = 'none';
         });
+    }
+
+    if (newGameButton) {
+        newGameButton.addEventListener('click', startNewGame);
     }
 }
 
@@ -874,9 +879,49 @@ function gameOver(p = player) {
         if (isNewHighScore) msg += ' <br/> ✨ New High Score! ✨';
         message.innerHTML = msg;
     }
+    if (newGameButton) newGameButton.style.display = 'block';
     soundManager.play('gameOver');
     p.comboMultiplier = 1;
     p.lastKillTime = 0;
+}
+
+function startNewGame() {
+    enemies = [];
+    obstacles = [];
+    scenery = [];
+    projectiles = [];
+    bombs = [];
+    melees = [];
+    particles = [];
+    messages = [];
+    enemyProjectiles = [];
+    stars = [];
+    powerUps = [];
+    player.hp = 100;
+    player.acorns = 100;
+    player.bombs = 5;
+    player.lives = 3;
+    player.score = 0;
+    player.vx = 0;
+    player.vy = 0;
+    player.x = canvas.width / 2;
+    player.y = canvas.height / 2;
+    player.comboMultiplier = 1;
+    player.lastKillTime = 0;
+    player.shotsFired = 0;
+    player.shotsHit = 0;
+    player.shieldTimer = 0;
+    player.rapidFireTimer = 0;
+    player.speedBoostTimer = 0;
+    gameRunning = true;
+    gamePaused = false;
+    nextEliteSpawn = performance.now() / 1000 + 60 + Math.random() * 120;
+    gameStartTime = performance.now() / 1000;
+    if (message) message.innerHTML = '';
+    if (newGameButton) newGameButton.style.display = 'none';
+    spawnObstacles();
+    spawnScenery();
+    update(performance.now());
 }
 
 // Splash screen implementation
