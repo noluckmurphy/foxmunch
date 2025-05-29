@@ -7,6 +7,9 @@ import Bomb from "./entities/Bomb.js";
 import Melee from "./entities/Melee.js";
 import Particle from "./entities/Particle.js";
 import FloatingText from "./entities/FloatingText.js";
+import ShieldPowerUp from "./entities/ShieldPowerUp.js";
+import RapidFirePowerUp from "./entities/RapidFirePowerUp.js";
+import SpeedBoostPowerUp from "./entities/SpeedBoostPowerUp.js";
 import Star from "./entities/Star.js";
 import { inputManager } from './InputManager.js';
 
@@ -130,6 +133,7 @@ let particles = [];
 let messages = [];
 let enemyProjectiles = [];
 let stars = [];
+let powerUps = [];
 let nextEliteSpawn = performance.now() / 1000 + 60 + Math.random() * 120;
 let gameStartTime = performance.now() / 1000;
 
@@ -196,6 +200,7 @@ function update(time) {
     updateEnemyProjectiles();
     updateParticles();
     updateStars();
+    updatePowerUps();
     updateMessages();
 
     // Collision detection
@@ -210,6 +215,7 @@ function update(time) {
     // Spawn enemies
     spawnEnemies();
     spawnStars();
+    spawnPowerUps();
 
     // Increase score over time
     player.score += deltaTime;
@@ -288,7 +294,7 @@ function updateEnemyProjectiles() {
         const dy = player.y - p.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
         if (distance < p.size + player.size) {
-            if (!player.invulnerableUntil || performance.now() >= player.invulnerableUntil) {
+            if ((!player.invulnerableUntil || performance.now() >= player.invulnerableUntil) && player.shieldTimer <= 0) {
                 player.hp -= p.damage;
                 soundManager.play('playerHurt');
                 triggerScreenShake(5, 200);
@@ -319,6 +325,14 @@ function updateStars() {
     for (let i = stars.length - 1; i >= 0; i--) {
         if (!stars[i].update(deltaTime, player)) {
             stars.splice(i, 1);
+        }
+    }
+}
+
+function updatePowerUps() {
+    for (let i = powerUps.length - 1; i >= 0; i--) {
+        if (!powerUps[i].update(deltaTime, player)) {
+            powerUps.splice(i, 1);
         }
     }
 }
@@ -357,7 +371,7 @@ function checkCollisions() {
             player.y += normalY * overlap;
 
             // Apply damage only if the player is not invulnerable
-            if (!player.invulnerableUntil || performance.now() >= player.invulnerableUntil) {
+            if ((!player.invulnerableUntil || performance.now() >= player.invulnerableUntil) && player.shieldTimer <= 0) {
             // Both player and enemy receive damage equal to enemy.damage
             player.hp -= enemy.damage;
             enemy.hp -= enemy.damage;
@@ -409,7 +423,7 @@ function checkCollisions() {
             player.y += normalY * overlap;
 
             // Apply damage only if enough time has passed since the last collision
-            if (!player.invulnerableUntil || now >= player.invulnerableUntil) {
+            if ((!player.invulnerableUntil || now >= player.invulnerableUntil) && player.shieldTimer <= 0) {
                 player.hp -= 1;
                 soundManager.play('collision');
                 triggerScreenShake(5, 200);
@@ -451,6 +465,7 @@ function draw() {
     drawMelees();
     drawBombs();
     drawStars();
+    drawPowerUps();
     drawParticles();
     drawEnemies();
     drawMessages();
@@ -608,6 +623,10 @@ function drawStars() {
     stars.forEach(star => star.draw(ctx));
 }
 
+function drawPowerUps() {
+    powerUps.forEach(p => p.draw(ctx));
+}
+
 function drawBomb(ctx, bomb) {
     ctx.save();
     ctx.globalAlpha = bomb.opacity;
@@ -697,6 +716,17 @@ function spawnStars() {
         const x = Math.random() * canvas.width;
         const y = Math.random() * canvas.height;
         stars.push(new Star(x, y));
+    }
+}
+
+function spawnPowerUps() {
+    if (Math.random() < 0.003) {
+        const x = Math.random() * canvas.width;
+        const y = Math.random() * canvas.height;
+        const r = Math.random();
+        if (r < 0.33) powerUps.push(new ShieldPowerUp(x, y));
+        else if (r < 0.66) powerUps.push(new RapidFirePowerUp(x, y));
+        else powerUps.push(new SpeedBoostPowerUp(x, y));
     }
 }
 
