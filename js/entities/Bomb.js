@@ -1,19 +1,20 @@
 import Particle from './Particle.js';
 import { spawnDeathParticles } from './Enemy.js';
 import SquareEnemy from './SquareEnemy.js';
+import { BOMB_DEFAULTS } from '../config.js';
 
 export default class Bomb {
     constructor(x, y, critical = false) {
         this.x = x;
         this.y = y;
         this.startTime = performance.now();
-        this.durationExpand = 200;
-        this.durationFade = 500;
-        this.maxRadius = critical ? 200 : 100;
+        this.durationExpand = BOMB_DEFAULTS.durationExpand;
+        this.durationFade = BOMB_DEFAULTS.durationFade;
+        this.maxRadius = critical ? BOMB_DEFAULTS.radius.critical : BOMB_DEFAULTS.radius.normal;
         this.currentRadius = 0;
         this.opacity = 1;
         this.done = false;
-        this.damage = critical ? 100 : 20;
+        this.damage = critical ? BOMB_DEFAULTS.damage.critical : BOMB_DEFAULTS.damage.normal;
         this.hitEnemies = new Set();
 
         // Visual effect properties for a fading outer ring during the explosion

@@ -3,11 +3,17 @@ const assert = require('assert');
 (async () => {
     const { default: Bomb } = await import('../js/entities/Bomb.js');
     const { default: Enemy } = await import('../js/entities/Enemy.js');
+    const { BOMB_DEFAULTS } = await import('../js/config.js');
 
     const player = { score: 0 };
     const enemy = new Enemy(30, 0, 5, 10, 0, 1, 'small', 0, 0);
     const enemies = [enemy];
     const bomb = new Bomb(0, 0);
+    assert.strictEqual(
+        bomb.maxRadius,
+        BOMB_DEFAULTS.radius.normal,
+        'Bomb max radius should match config'
+    );
 
     // Pretend the bomb has been active for 100ms so it has a radius
     bomb.startTime = performance.now() - 100;
