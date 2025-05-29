@@ -521,6 +521,12 @@ function drawPlayer() {
     ctx.save();
     ctx.translate(player.x, player.y);
     ctx.rotate(player.angle);
+    if (player.speedBoostTimer > 0) {
+        ctx.font = `${player.size}px Arial`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🔥', -player.size * 1.4, 0);
+    }
     ctx.beginPath();
     // Draw an isosceles triangle rotated 90 degrees so the tip points right
     ctx.moveTo(player.size, 0); // Tip of the triangle (pointing right)
@@ -531,9 +537,21 @@ function drawPlayer() {
     if (player.invulnerableUntil && performance.now() < player.invulnerableUntil) {
         alpha = 0.5 + 0.5 * Math.sin(performance.now() / 60);
     }
-    ctx.fillStyle = 'orange';
+    ctx.fillStyle = player.rapidFireTimer > 0 ? 'yellow' : 'orange';
     ctx.globalAlpha = alpha;
     ctx.fill();
+    if (player.rapidFireTimer > 0) {
+        const flash = player.size * 0.4 * (1 + Math.sin(performance.now() / 50));
+        ctx.beginPath();
+        ctx.arc(player.size + flash * 0.5, 0, flash, 0, Math.PI * 2);
+        ctx.fillStyle = 'red';
+        ctx.fill();
+    }
+    if (player.shieldTimer > 0) {
+        ctx.lineWidth = 3 + Math.sin(performance.now() / 100) * 1;
+        ctx.strokeStyle = 'white';
+        ctx.stroke();
+    }
     ctx.globalAlpha = 1;
     ctx.restore();
 }
