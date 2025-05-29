@@ -1,6 +1,7 @@
 import Projectile from './Projectile.js';
 import Bomb from './Bomb.js';
 import Melee from './Melee.js';
+import { PLAYER_DEFAULTS } from '../config.js';
 
 export const SHIELD_DURATION = 5;
 export const BASE_PROJECTILE_COOLDOWN = 0.05;
@@ -11,18 +12,18 @@ export default class Player {
     constructor(x, y) {
         this.x = x;
         this.y = y;
-        this.size = 20;
-        this.color = '#FFA500';
+        this.size = PLAYER_DEFAULTS.size;
+        this.color = PLAYER_DEFAULTS.color;
         this.angle = 0;
         this.vx = 0;
         this.vy = 0;
-        this.maxSpeed = 4;
-        this.acceleration = 0.2;
-        this.deceleration = 0.05;
-        this.hp = 100;
-        this.acorns = 200;
-        this.bombs = 5;
-        this.lives = 3;
+        this.maxSpeed = PLAYER_DEFAULTS.maxSpeed;
+        this.acceleration = PLAYER_DEFAULTS.acceleration;
+        this.deceleration = PLAYER_DEFAULTS.deceleration;
+        this.hp = PLAYER_DEFAULTS.hp;
+        this.acorns = PLAYER_DEFAULTS.acorns;
+        this.bombs = PLAYER_DEFAULTS.bombs;
+        this.lives = PLAYER_DEFAULTS.lives;
         this.score = 0;
         this.shotsFired = 0;
         this.shotsHit = 0;
