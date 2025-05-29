@@ -2,6 +2,8 @@ import { soundManager } from './sounds.js';
 import Player from "./entities/Player.js";
 import EliteEnemy from "./entities/EliteEnemy.js";
 import Enemy, { spawnDeathParticles } from "./entities/Enemy.js";
+import SquareEnemy from "./entities/SquareEnemy.js";
+import ChargingEnemy from "./entities/ChargingEnemy.js";
 import Projectile from "./entities/Projectile.js";
 import Bomb from "./entities/Bomb.js";
 import Melee from "./entities/Melee.js";
@@ -232,7 +234,7 @@ function updatePlayer() {
 
 function updateEnemies() {
     for (let i = enemies.length - 1; i >= 0; i--) {
-        if (!enemies[i].update(canvas, enemyProjectiles)) {
+        if (!enemies[i].update(canvas, enemyProjectiles, player)) {
             enemies.splice(i, 1);
         }
     }
@@ -389,6 +391,9 @@ function checkCollisions() {
 
             // Remove enemy if its health drops to 0 or below
             if (enemy.hp <= 0) {
+                if (enemy instanceof SquareEnemy) {
+                    SquareEnemy.split(enemy, enemies);
+                }
                 spawnDeathParticles(enemy, particles);
                 enemies.splice(index, 1);
             }
@@ -554,7 +559,16 @@ function drawEnemies() {
             }
         } else {
             ctx.beginPath();
-            ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+            if (enemy.shape === 'square') {
+                ctx.rect(enemy.x - enemy.size, enemy.y - enemy.size, enemy.size * 2, enemy.size * 2);
+            } else if (enemy.shape === 'triangle') {
+                ctx.moveTo(enemy.x, enemy.y - enemy.size);
+                ctx.lineTo(enemy.x + enemy.size, enemy.y + enemy.size);
+                ctx.lineTo(enemy.x - enemy.size, enemy.y + enemy.size);
+                ctx.closePath();
+            } else {
+                ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
+            }
             ctx.fillStyle = 'black';
             ctx.fill();
         }
@@ -706,12 +720,13 @@ function spawnEnemies() {
     }
     if (Math.random() < currentSpawnChance()) {
         let rand = Math.random();
-        let type;
-        if (rand < 0.5) type = 'small';
-        else if (rand < 0.8) type = 'medium';
-        else type = 'large';
+        let enemy;
+        if (rand < 0.4) enemy = createEnemy('small', enemyScale());
+        else if (rand < 0.65) enemy = createEnemy('medium', enemyScale());
+        else if (rand < 0.8) enemy = createEnemy('large', enemyScale());
+        else if (rand < 0.9) enemy = createSquareEnemy('large', enemyScale());
+        else enemy = createChargingEnemy(enemyScale());
 
-        let enemy = createEnemy(type, enemyScale());
         enemies.push(enemy);
     }
 }
@@ -818,6 +833,49 @@ function createEnemy(type, scale = 1) {
 
     let angle = Math.atan2(player.y - y, player.x - x);
     return new Enemy(x, y, size, hp, speed, damage, type, Math.cos(angle) * speed, Math.sin(angle) * speed);
+}
+
+function createSquareEnemy(stage = 'large', scale = 1) {
+    const tmp = { large: { size: 50, hp: 16, speed: 0.8, damage: 12 },
+                    medium: { size: 30, hp: 8, speed: 1.2, damage: 6 },
+                    small: { size: 18, hp: 3, speed: 1.8, damage: 3 } }[stage];
+    let { size, hp, speed, damage } = tmp;
+    hp = Math.ceil(hp * scale);
+    damage = Math.ceil(damage * scale);
+    speed *= 1 + (scale - 1) * 0.5;
+
+    let side = Math.floor(Math.random() * 4);
+    let x, y;
+    switch (side) {
+        case 0: x = Math.random() * canvas.width; y = -size; break;
+        case 1: x = canvas.width + size; y = Math.random() * canvas.height; break;
+        case 2: x = Math.random() * canvas.width; y = canvas.height + size; break;
+        case 3: x = -size; y = Math.random() * canvas.height; break;
+    }
+    const angle = Math.atan2(player.y - y, player.x - x);
+    return new SquareEnemy(x, y, stage, Math.cos(angle) * speed, Math.sin(angle) * speed);
+}
+
+function createChargingEnemy(scale = 1) {
+    const size = 25;
+    let hp = 10;
+    let speed = 1 + Math.random();
+    let damage = 8;
+
+    hp = Math.ceil(hp * scale);
+    damage = Math.ceil(damage * scale);
+    speed *= 1 + (scale - 1) * 0.5;
+
+    let side = Math.floor(Math.random() * 4);
+    let x, y;
+    switch (side) {
+        case 0: x = Math.random() * canvas.width; y = -size; break;
+        case 1: x = canvas.width + size; y = Math.random() * canvas.height; break;
+        case 2: x = Math.random() * canvas.width; y = canvas.height + size; break;
+        case 3: x = -size; y = Math.random() * canvas.height; break;
+    }
+    const angle = Math.atan2(player.y - y, player.x - x);
+    return new ChargingEnemy(x, y, Math.cos(angle) * speed, Math.sin(angle) * speed);
 }
 
 function createEliteEnemy(scale = 1) {

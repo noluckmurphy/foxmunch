@@ -1,7 +1,7 @@
 import Particle from './Particle.js';
 
 export default class Enemy {
-    constructor(x, y, size, hp, speed, damage, type, vx, vy) {
+    constructor(x, y, size, hp, speed, damage, type, vx, vy, shape = 'circle') {
         this.x = x;
         this.y = y;
         this.size = size;
@@ -11,6 +11,7 @@ export default class Enemy {
         this.type = type;
         this.vx = vx;
         this.vy = vy;
+        this.shape = shape;
     }
 
     update(canvas, _enemyProjectiles = null) {
@@ -39,7 +40,16 @@ export function spawnDeathParticles(enemy, particles) {
             count = 12;
             break;
         case 'large':
+        case 'square_large':
             count = 18;
+            break;
+        case 'square_medium':
+        case 'medium':
+            count = 12;
+            break;
+        case 'square_small':
+        case 'small':
+            count = 8;
             break;
         default:
             count = 8;
