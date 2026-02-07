@@ -13,12 +13,24 @@ export default class ChargingEnemy extends Enemy {
     }
 
     update(canvas, enemyProjectiles, player, dt = 0) {
-        if (player && !this.frozen) {
-            const dx = player.x - this.x;
-            const dy = player.y - this.y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < this.chargeRadius) {
-                const angle = Math.atan2(dy, dx);
+        // player can be a single player or an array of players
+        const targets = Array.isArray(player) ? player : (player ? [player] : []);
+        if (!this.frozen && targets.length > 0) {
+            // Find nearest alive player
+            let nearest = null;
+            let nearestDist = Infinity;
+            for (const p of targets) {
+                if (p.alive === false) continue;
+                const dx = p.x - this.x;
+                const dy = p.y - this.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearest = p;
+                }
+            }
+            if (nearest && nearestDist < this.chargeRadius) {
+                const angle = Math.atan2(nearest.y - this.y, nearest.x - this.x);
                 this.vx = Math.cos(angle) * this.chargeSpeed;
                 this.vy = Math.sin(angle) * this.chargeSpeed;
             }
