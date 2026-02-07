@@ -12,8 +12,17 @@ export default class Orbital extends Enemy {
         this.lastShot = performance.now() / 1000;
     }
 
-    update(canvas, enemyProjectiles) {
-        this.angle += this.rotationSpeed;
+    update(canvas, enemyProjectiles, _player = null, dt = 0) {
+        // Apply fire DOT (passive burn during Fire bonus)
+        if (this.fireDOT > 0 && dt > 0) {
+            this.hp -= this.fireDOT * dt;
+        }
+
+        if (this.frozen) {
+            return this.hp > 0 && this.parent.hp > 0;
+        }
+
+        this.angle += this.rotationSpeed * this.speedMultiplier;
         this.x = this.parent.x + Math.cos(this.angle) * this.radius;
         this.y = this.parent.y + Math.sin(this.angle) * this.radius;
 

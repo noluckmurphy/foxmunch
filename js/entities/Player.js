@@ -38,6 +38,14 @@ export default class Player {
         this.speedBoostTimer = 0;
         this.meleeHitStreak = 0;
 
+        // World bonus state flags
+        this.windBonusActive = false;
+        this.earthBonusActive = false;
+        this.hidingInObstacle = null;   // reference to obstacle the player is inside
+        this.freezeBonusActive = false;
+        this.fireBonusActive = false;
+        this.fireImmune = false;
+
         // Optional callback to display messages such as combo notifications
         this.messageCallback = null;
     }

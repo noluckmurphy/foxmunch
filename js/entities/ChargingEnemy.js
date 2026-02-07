@@ -12,8 +12,8 @@ export default class ChargingEnemy extends Enemy {
         this.chargeSpeed = speed * 2.5;
     }
 
-    update(canvas, enemyProjectiles, player) {
-        if (player) {
+    update(canvas, enemyProjectiles, player, dt = 0) {
+        if (player && !this.frozen) {
             const dx = player.x - this.x;
             const dy = player.y - this.y;
             const dist = Math.sqrt(dx * dx + dy * dy);
@@ -23,6 +23,6 @@ export default class ChargingEnemy extends Enemy {
                 this.vy = Math.sin(angle) * this.chargeSpeed;
             }
         }
-        return super.update(canvas, enemyProjectiles);
+        return super.update(canvas, enemyProjectiles, player, dt);
     }
 }

@@ -12,11 +12,28 @@ export default class Enemy {
         this.vx = vx;
         this.vy = vy;
         this.shape = shape;
+
+        // World bonus support
+        this.speedMultiplier = 1;   // Freeze bonus sets this low
+        this.frozen = false;        // Freeze bonus can fully stop an enemy
+        this.fireDOT = 0;          // Fire bonus passive damage per second
+        this.baseVx = vx;          // store original velocities for restore
+        this.baseVy = vy;
     }
 
-    update(canvas, _enemyProjectiles = null) {
-        this.x += this.vx;
-        this.y += this.vy;
+    update(canvas, _enemyProjectiles = null, _player = null, dt = 0) {
+        // Apply fire DOT (passive burn on all enemies during Fire bonus)
+        if (this.fireDOT > 0 && dt > 0) {
+            this.hp -= this.fireDOT * dt;
+        }
+
+        // Movement with freeze / slow support
+        if (this.frozen) {
+            // completely stopped – don't move
+        } else {
+            this.x += this.vx * this.speedMultiplier;
+            this.y += this.vy * this.speedMultiplier;
+        }
         if (
             this.x < -this.size ||
             this.x > canvas.width + this.size ||

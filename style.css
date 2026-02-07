@@ -133,3 +133,21 @@ body, html {
     width: 40px;
     margin-left: 5px;
 }
+
+.hud-bonus-timer {
+    margin-top: 6px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.hud-bonus-active {
+    background: rgba(255, 200, 50, 0.25);
+    animation: bonusPulse 1s ease-in-out infinite;
+}
+
+@keyframes bonusPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}

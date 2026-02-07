@@ -23,7 +23,7 @@ export default class EliteEnemy extends Enemy {
         }
     }
 
-    update(canvas) {
-        return super.update(canvas);
+    update(canvas, enemyProjectiles, player, dt = 0) {
+        return super.update(canvas, enemyProjectiles, player, dt);
     }
 }

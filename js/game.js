@@ -15,6 +15,8 @@ import SpeedBoostPowerUp from "./entities/SpeedBoostPowerUp.js";
 import Star from "./entities/Star.js";
 import { inputManager } from './InputManager.js';
 import { isClearOfObstacles } from './spawnUtils.js';
+import WorldBonus from './WorldBonus.js';
+import Bonfire from './entities/Bonfire.js';
 
 
 const canvas = typeof document !== 'undefined' ? document.getElementById('gameCanvas') : { getContext: () => null };
@@ -142,8 +144,21 @@ let messages = [];
 let enemyProjectiles = [];
 let stars = [];
 let powerUps = [];
+let bonfires = [];
 let nextEliteSpawn = performance.now() / 1000 + 60 + Math.random() * 120;
 let gameStartTime = performance.now() / 1000;
+
+// World bonus roulette system
+const worldBonus = new WorldBonus();
+
+// Wind bonus constants
+const WIND_PUSH_RADIUS = 200;
+const WIND_PUSH_FORCE = 3;
+
+// Earth bonus constants
+const EARTH_SHRAPNEL_RADIUS = 100;
+const EARTH_SHRAPNEL_DAMAGE = 15;
+const EARTH_RESPAWN_MIN_DIST = 400;
 
 // Difficulty scaling configuration
 const baseSpawnChance = 0.02;
@@ -197,6 +212,24 @@ function update(time) {
 
     if (gamePaused) return;
 
+    // --- World Bonus state machine ---
+    const bonusEvent = worldBonus.update(deltaTime);
+
+    if (bonusEvent.event === 'bonusActivated') {
+        activateWorldBonus(bonusEvent.bonus);
+    }
+    if (bonusEvent.event === 'bonusEnded') {
+        deactivateWorldBonus(bonusEvent.bonus);
+    }
+
+    // If the roulette is spinning or revealing, pause gameplay but keep drawing
+    if (worldBonus.isPausing) {
+        // Still draw the frozen scene + overlay
+        draw();
+        updateHUD();
+        return;
+    }
+
     // Update game objects
     updatePlayer();
     updateEnemies();
@@ -210,6 +243,12 @@ function update(time) {
     updateStars();
     updatePowerUps();
     updateMessages();
+    updateBonfires();
+
+    // Apply active world bonus effects each frame
+    if (worldBonus.isBonusActive) {
+        applyWorldBonusEffects();
+    }
 
     // Collision detection
     checkCollisions();
@@ -235,7 +274,29 @@ function updatePlayer() {
 
 function updateEnemies() {
     for (let i = enemies.length - 1; i >= 0; i--) {
-        if (!enemies[i].update(canvas, enemyProjectiles, player)) {
+        const enemy = enemies[i];
+        if (!enemy.update(canvas, enemyProjectiles, player, deltaTime)) {
+            enemies.splice(i, 1);
+            continue;
+        }
+        // Check if fire DOT killed this enemy
+        if (enemy.hp <= 0) {
+            let baseScore = 0;
+            if (enemy.type === 'small' || enemy.type === 'square_small') baseScore = 10;
+            else if (enemy.type === 'medium' || enemy.type === 'square_medium') baseScore = 30;
+            else if (enemy.type === 'large' || enemy.type === 'square_large') baseScore = 50;
+            else if (enemy.type === 'orbital') baseScore = 5;
+            else if (enemy.type === 'elite') baseScore = 100;
+            if (typeof player.addKillScore === 'function') {
+                player.addKillScore(baseScore);
+            } else {
+                player.score += baseScore;
+            }
+            if (enemy instanceof SquareEnemy) {
+                SquareEnemy.split(enemy, enemies);
+            }
+            if (soundManager) soundManager.play('enemyDeath');
+            spawnDeathParticles(enemy, particles);
             enemies.splice(i, 1);
         }
     }
@@ -299,11 +360,11 @@ function updateEnemyProjectiles() {
             continue;
         }
 
-        // Check collision with player
+        // Check collision with player (skip if hiding in obstacle)
         const dx = player.x - p.x;
         const dy = player.y - p.y;
         const distance = Math.sqrt(dx * dx + dy * dy);
-        if (distance < p.size + player.size) {
+        if (distance < p.size + player.size && !(player.earthBonusActive && player.hidingInObstacle)) {
             if ((!player.invulnerableUntil || performance.now() >= player.invulnerableUntil) && player.shieldTimer <= 0) {
                 player.hp -= p.damage;
                 soundManager.play('playerHurt');
@@ -396,11 +457,230 @@ function updateMessages() {
     }
 }
 
+function updateBonfires() {
+    for (let i = bonfires.length - 1; i >= 0; i--) {
+        bonfires[i].update(deltaTime, enemies, particles);
+    }
+}
+
+/* ------------------------------------------------------------------ */
+/*  World Bonus activation / deactivation / per-frame effects          */
+/* ------------------------------------------------------------------ */
+
+function activateWorldBonus(bonusId) {
+    switch (bonusId) {
+        case 'wind':
+            player.windBonusActive = true;
+            break;
+        case 'earth':
+            player.earthBonusActive = true;
+            player.hidingInObstacle = null;
+            break;
+        case 'freeze':
+            player.freezeBonusActive = true;
+            // Apply freeze to all current enemies
+            applyFreezeToEnemies();
+            break;
+        case 'fire':
+            player.fireBonusActive = true;
+            player.fireImmune = true;
+            // Set passive DOT on all current enemies
+            applyFireDOTToEnemies();
+            // Spawn bonfires
+            spawnBonfires();
+            break;
+        case 'boss':
+            // Spawn a boss enemy
+            const elite = createEliteEnemy(enemyScale());
+            enemies.push(elite);
+            elite.createOrbitals(enemies, enemyProjectiles);
+            break;
+    }
+}
+
+function deactivateWorldBonus(bonusId) {
+    switch (bonusId) {
+        case 'wind':
+            player.windBonusActive = false;
+            break;
+        case 'earth':
+            player.earthBonusActive = false;
+            player.hidingInObstacle = null;
+            break;
+        case 'freeze':
+            player.freezeBonusActive = false;
+            // Restore all enemy speeds
+            for (const enemy of enemies) {
+                enemy.speedMultiplier = 1;
+                enemy.frozen = false;
+            }
+            break;
+        case 'fire':
+            player.fireBonusActive = false;
+            player.fireImmune = false;
+            // Remove passive DOT from all enemies
+            for (const enemy of enemies) {
+                enemy.fireDOT = 0;
+            }
+            // Remove all bonfires
+            bonfires = [];
+            break;
+    }
+}
+
+function applyWorldBonusEffects() {
+    const bonus = worldBonus.activeBonus;
+
+    if (bonus === 'wind') {
+        applyWindPush();
+    }
+    // Earth effects are handled in checkCollisions
+    // Freeze: ensure newly spawned enemies are also frozen
+    if (bonus === 'freeze') {
+        for (const enemy of enemies) {
+            if (enemy.speedMultiplier === 1 && !enemy.frozen) {
+                // Newly spawned enemy during freeze
+                enemy.speedMultiplier = 0.1;
+                if (Math.random() < 0.3) enemy.frozen = true;
+            }
+        }
+    }
+    // Fire: ensure newly spawned enemies get DOT
+    if (bonus === 'fire') {
+        for (const enemy of enemies) {
+            if (enemy.fireDOT === 0) {
+                enemy.fireDOT = 1.5; // 1.5 damage per second passive
+            }
+        }
+    }
+}
+
+function applyWindPush() {
+    for (const enemy of enemies) {
+        const dx = enemy.x - player.x;
+        const dy = enemy.y - player.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < WIND_PUSH_RADIUS && dist > 0) {
+            const proximity = 1 - dist / WIND_PUSH_RADIUS;
+            const pushX = (dx / dist) * WIND_PUSH_FORCE * proximity;
+            const pushY = (dy / dist) * WIND_PUSH_FORCE * proximity;
+            enemy.x += pushX;
+            enemy.y += pushY;
+        }
+    }
+
+    // Wind particles
+    if (Math.random() < 0.5) {
+        const angle = Math.random() * Math.PI * 2;
+        const r = Math.random() * WIND_PUSH_RADIUS * 0.9;
+        const px = player.x + Math.cos(angle) * r;
+        const py = player.y + Math.sin(angle) * r;
+        const speed = 1 + Math.random() * 2;
+        // Particles swirl outward
+        particles.push(new Particle(
+            px, py,
+            Math.cos(angle + 0.5) * speed,
+            Math.sin(angle + 0.5) * speed,
+            1.5,
+            0.5 + Math.random() * 0.3,
+            'rgba(200, 230, 255, 0.6)'
+        ));
+    }
+}
+
+function applyFreezeToEnemies() {
+    for (const enemy of enemies) {
+        enemy.speedMultiplier = 0.1;
+        if (Math.random() < 0.3) {
+            enemy.frozen = true;
+        }
+    }
+}
+
+function applyFireDOTToEnemies() {
+    for (const enemy of enemies) {
+        enemy.fireDOT = 1.5; // 1.5 damage per second passive
+    }
+}
+
+function spawnBonfires() {
+    const count = 5 + Math.floor(Math.random() * 4); // 5-8
+    for (let i = 0; i < count; i++) {
+        let x, y;
+        let attempts = 0;
+        do {
+            x = Math.random() * canvas.width;
+            y = Math.random() * canvas.height;
+            attempts++;
+        } while (
+            attempts < 20 &&
+            Math.hypot(x - player.x, y - player.y) < 150 // not too close to player
+        );
+        bonfires.push(new Bonfire(x, y, 80, 10));
+    }
+}
+
+function earthExplodeObstacle(obstacle) {
+    // Spawn shrapnel particles
+    const count = 12 + Math.floor(Math.random() * 9); // 12-20
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 4;
+        const colors = ['#8B4513', '#A0522D', '#D2691E', '#CD853F', '#6B3A2A'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        particles.push(new Particle(
+            obstacle.x, obstacle.y,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed,
+            2 + Math.random() * 3,
+            0.6 + Math.random() * 0.4,
+            color
+        ));
+    }
+
+    // Damage nearby enemies
+    for (const enemy of enemies) {
+        const dx = enemy.x - obstacle.x;
+        const dy = enemy.y - obstacle.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < EARTH_SHRAPNEL_RADIUS + enemy.size) {
+            enemy.hp -= EARTH_SHRAPNEL_DAMAGE;
+        }
+    }
+
+    // Screen shake (rumble)
+    triggerScreenShake(10, 300);
+
+    // Remove this obstacle
+    const idx = obstacles.indexOf(obstacle);
+    if (idx !== -1) obstacles.splice(idx, 1);
+
+    // Spawn a new obstacle far from the player
+    let newObs;
+    let attempts = 0;
+    do {
+        newObs = {
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            size: Math.random() * 20 + 10
+        };
+        attempts++;
+    } while (
+        attempts < 50 &&
+        Math.hypot(newObs.x - player.x, newObs.y - player.y) < EARTH_RESPAWN_MIN_DIST
+    );
+    obstacles.push(newObs);
+}
+
 function checkCollisions() {
     const now = performance.now();
 
     // Player and enemies - bounce and damage on impact
+    // Skip enemy collisions if player is hiding in an obstacle (Earth bonus)
+    const isPlayerHiding = player.earthBonusActive && player.hidingInObstacle;
     for (let index = enemies.length - 1; index >= 0; index--) {
+        if (isPlayerHiding) break; // invulnerable while hidden
+
         const enemy = enemies[index];
         let dx = player.x - enemy.x;
         let dy = player.y - enemy.y;
@@ -456,45 +736,69 @@ function checkCollisions() {
         }
     }
 
-    // Player and obstacles - Bounce on collision with brief invulnerability
-    obstacles.forEach((obstacle) => {
-        let dx = player.x - obstacle.x;
-        let dy = player.y - obstacle.y;
-        let distance = Math.sqrt(dx * dx + dy * dy);
+    // Player and obstacles - Bounce on collision (or hide during Earth bonus)
+    if (player.earthBonusActive) {
+        // Earth bonus: player can hide inside obstacles
+        let insideAny = null;
+        for (const obstacle of obstacles) {
+            const dx = player.x - obstacle.x;
+            const dy = player.y - obstacle.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < obstacle.size) {
+                insideAny = obstacle;
+                break;
+            }
+        }
 
-        if (distance < obstacle.size + player.size) {
-            // Bounce: compute the collision normal (direction from obstacle to player)
-            let normalX = dx / distance;
-            let normalY = dy / distance;
+        if (insideAny && !player.hidingInObstacle) {
+            // Just entered an obstacle – start hiding
+            player.hidingInObstacle = insideAny;
+        } else if (player.hidingInObstacle && insideAny !== player.hidingInObstacle) {
+            // Exited the obstacle we were hiding in – explode it
+            earthExplodeObstacle(player.hidingInObstacle);
+            player.hidingInObstacle = insideAny || null; // might have entered another
+        } else if (!insideAny && player.hidingInObstacle) {
+            // Fully exited
+            earthExplodeObstacle(player.hidingInObstacle);
+            player.hidingInObstacle = null;
+        }
+    } else {
+        // Normal obstacle collision
+        obstacles.forEach((obstacle) => {
+            let dx = player.x - obstacle.x;
+            let dy = player.y - obstacle.y;
+            let distance = Math.sqrt(dx * dx + dy * dy);
 
-            // Reflect the player's velocity vector: v' = v - 2*(v · n)*n
-            let dot = player.vx * normalX + player.vy * normalY;
-            player.vx = player.vx - 2 * dot * normalX;
-            player.vy = player.vy - 2 * dot * normalY;
+            if (distance < obstacle.size + player.size) {
+                let normalX = dx / distance;
+                let normalY = dy / distance;
 
-            // Push the player out of collision to avoid sticking
-            let overlap = (obstacle.size + player.size) - distance;
-            player.x += normalX * overlap;
-            player.y += normalY * overlap;
+                let dot = player.vx * normalX + player.vy * normalY;
+                player.vx = player.vx - 2 * dot * normalX;
+                player.vy = player.vy - 2 * dot * normalY;
 
-            // Apply damage only if enough time has passed since the last collision
-            if ((!player.invulnerableUntil || now >= player.invulnerableUntil) && player.shieldTimer <= 0) {
-                player.hp -= 1;
-                soundManager.play('collision');
-                triggerScreenShake(5, 200);
-                player.invulnerableUntil = now + 120; // 120ms invulnerability period
+                let overlap = (obstacle.size + player.size) - distance;
+                player.x += normalX * overlap;
+                player.y += normalY * overlap;
 
-                if (player.hp <= 0) {
-                    player.lives--;
-                    if (player.lives > 0) {
-                        respawnPlayer();
-                    } else {
-                        gameOver();
+                if ((!player.invulnerableUntil || now >= player.invulnerableUntil) && player.shieldTimer <= 0) {
+                    player.hp -= 1;
+                    soundManager.play('collision');
+                    triggerScreenShake(5, 200);
+                    player.invulnerableUntil = now + 120;
+
+                    if (player.hp <= 0) {
+                        player.lives--;
+                        if (player.lives > 0) {
+                            respawnPlayer();
+                        } else {
+                            gameOver();
+                        }
                     }
                 }
             }
-        }
-    });
+        });
+    }
 }
 
 function draw() {
@@ -514,6 +818,8 @@ function draw() {
 
     drawEnvironment();
     drawObstacles();
+    drawBonfireEntities();
+    drawWindAura();
     drawPlayer();
     drawProjectiles();
     drawEnemyProjectiles();
@@ -525,7 +831,16 @@ function draw() {
     drawEnemies();
     drawMessages();
 
+    // Freeze blue hue overlay (drawn on top of everything in the game scene)
+    if (player.freezeBonusActive) {
+        ctx.fillStyle = 'rgba(0, 80, 200, 0.15)';
+        ctx.fillRect(-offsetX, -offsetY, canvas.width, canvas.height);
+    }
+
     ctx.restore();
+
+    // Roulette overlay (drawn outside the shake transform)
+    worldBonus.draw(ctx, canvas);
 }
 
 function drawEnvironment() {
@@ -563,9 +878,30 @@ function drawEnvironment() {
 }
 
 function drawPlayer() {
+    // If hiding in an obstacle during Earth bonus, draw player semi-transparent behind obstacle
+    const isHiding = player.earthBonusActive && player.hidingInObstacle;
+
     ctx.save();
     ctx.translate(player.x, player.y);
     ctx.rotate(player.angle);
+
+    // Fire immunity aura (drawn behind player, in unrotated space would be better but
+    // a simple glow around origin works fine)
+    if (player.fireImmune) {
+        ctx.save();
+        ctx.rotate(-player.angle); // undo rotation for circular glow
+        const glowSize = player.size * 2.5 + Math.sin(performance.now() / 200) * 5;
+        const grad = ctx.createRadialGradient(0, 0, player.size * 0.5, 0, 0, glowSize);
+        grad.addColorStop(0, 'rgba(255, 120, 0, 0.25)');
+        grad.addColorStop(0.6, 'rgba(255, 60, 0, 0.1)');
+        grad.addColorStop(1, 'rgba(255, 60, 0, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(0, 0, glowSize, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+
     if (player.speedBoostTimer > 0) {
         ctx.font = `${player.size}px Arial`;
         ctx.textAlign = 'center';
@@ -581,6 +917,9 @@ function drawPlayer() {
     let alpha = 1;
     if (player.invulnerableUntil && performance.now() < player.invulnerableUntil) {
         alpha = 0.5 + 0.5 * Math.sin(performance.now() / 60);
+    }
+    if (isHiding) {
+        alpha *= 0.35; // very faint when hiding in obstacle
     }
     ctx.fillStyle = player.rapidFireTimer > 0 ? 'yellow' : 'orange';
     ctx.globalAlpha = alpha;
@@ -603,21 +942,42 @@ function drawPlayer() {
 
 function drawEnemies() {
     enemies.forEach((enemy) => {
+        // Determine fill color based on freeze/fire state
+        let baseFill = 'black';
+        if (enemy.type === 'orbital') baseFill = 'gray';
+
+        if (enemy.frozen) {
+            baseFill = enemy.type === 'orbital' ? '#88aacc' : '#4477aa';
+        }
+
         if (enemy.type === 'orbital') {
             ctx.beginPath();
             ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
-            ctx.fillStyle = 'gray';
+            ctx.fillStyle = baseFill;
             ctx.fill();
+            // Frozen ice crystal overlay
+            if (enemy.frozen) {
+                ctx.strokeStyle = 'rgba(180, 220, 255, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
         } else if (enemy.type === 'elite') {
             ctx.beginPath();
             ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = enemy.frozen ? '#335588' : 'black';
             ctx.fill();
             if (enemy.shield > 0) {
                 ctx.beginPath();
                 ctx.lineWidth = 10 * (enemy.shield / enemy.shieldMax);
                 ctx.strokeStyle = 'pink';
                 ctx.arc(enemy.x, enemy.y, enemy.size + 5, 0, Math.PI * 2);
+                ctx.stroke();
+            }
+            if (enemy.frozen) {
+                ctx.beginPath();
+                ctx.arc(enemy.x, enemy.y, enemy.size + 2, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(180, 220, 255, 0.5)';
+                ctx.lineWidth = 3;
                 ctx.stroke();
             }
         } else {
@@ -632,8 +992,13 @@ function drawEnemies() {
             } else {
                 ctx.arc(enemy.x, enemy.y, enemy.size, 0, Math.PI * 2);
             }
-            ctx.fillStyle = 'black';
+            ctx.fillStyle = baseFill;
             ctx.fill();
+            if (enemy.frozen) {
+                ctx.strokeStyle = 'rgba(180, 220, 255, 0.6)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
         }
     });
 }
@@ -735,12 +1100,64 @@ function drawMessages() {
     messages.forEach(m => m.draw(ctx));
 }
 
+function drawBonfireEntities() {
+    bonfires.forEach(b => b.draw(ctx));
+}
+
+function drawWindAura() {
+    if (!player.windBonusActive) return;
+    ctx.save();
+    const grad = ctx.createRadialGradient(
+        player.x, player.y, 0,
+        player.x, player.y, WIND_PUSH_RADIUS
+    );
+    grad.addColorStop(0, 'rgba(200, 230, 255, 0.0)');
+    grad.addColorStop(0.5, 'rgba(200, 230, 255, 0.08)');
+    grad.addColorStop(0.85, 'rgba(180, 220, 255, 0.15)');
+    grad.addColorStop(1, 'rgba(180, 220, 255, 0.0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(player.x, player.y, WIND_PUSH_RADIUS, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Animated swirl lines
+    const now = performance.now() / 1000;
+    ctx.strokeStyle = 'rgba(200, 230, 255, 0.25)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
+        const baseAngle = (i / 6) * Math.PI * 2 + now * 1.5;
+        ctx.beginPath();
+        for (let t = 0; t < 1; t += 0.02) {
+            const r = WIND_PUSH_RADIUS * t;
+            const a = baseAngle + t * 2;
+            const x = player.x + Math.cos(a) * r;
+            const y = player.y + Math.sin(a) * r;
+            if (t === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+    }
+    ctx.restore();
+}
+
 function updateHUD() {
     // Guard against NaN values in HUD
     const safe = v => (typeof v === 'number' && isFinite(v) && !isNaN(v)) ? Math.floor(v) : 0;
     const healthPct = Math.max(0, Math.min(safe(player.hp), 100));
     const acornPct = Math.max(0, Math.min(safe(player.acorns), 100));
     const bombPct = Math.max(0, Math.min(safe(player.bombs * 20), 100)); // 5 bombs = 100%
+
+    // World bonus status line
+    let bonusLine = '';
+    if (worldBonus.phase === 'countdown') {
+        bonusLine = `<div class="hud-bonus-timer">Next Bonus: ${safe(worldBonus.countdownTimer)}s</div>`;
+    } else if (worldBonus.phase === 'spinning' || worldBonus.phase === 'reveal') {
+        bonusLine = `<div class="hud-bonus-timer hud-bonus-active">Roulette!</div>`;
+    } else if (worldBonus.isBonusActive) {
+        const bonusNames = { wind: '🌬️ Wind', earth: '🪨 Earth', freeze: '❄️ Freeze', fire: '🔥 Fire' };
+        const label = bonusNames[worldBonus.activeBonus] || worldBonus.activeBonus;
+        bonusLine = `<div class="hud-bonus-timer hud-bonus-active">${label}: ${safe(worldBonus.bonusTimer)}s</div>`;
+    }
 
     hud.innerHTML = `
         <div>Lives: ${safe(player.lives)}</div>
@@ -751,6 +1168,7 @@ function updateHUD() {
         <div>Accuracy: ${player.shotsFired ? Math.floor((player.shotsHit / player.shotsFired) * 100) : 0}%</div>
         <div>Combo: x${safe(player.comboMultiplier)}</div>
         <div>High Score: ${safe(highScore)}</div>
+        ${bonusLine}
     `;
 }
 
@@ -1000,6 +1418,7 @@ function respawnPlayer() {
     player.vy = 0;
     player.comboMultiplier = 1;
     player.lastKillTime = 0;
+    player.hidingInObstacle = null; // clear earth hiding on respawn
     if (message) message.innerText = 'You Died';
     gamePaused = true;
     setTimeout(() => {
@@ -1010,6 +1429,12 @@ function respawnPlayer() {
 
 function gameOver(p = player) {
     gameRunning = false;
+    // Clean up any active world bonus
+    if (worldBonus.activeBonus) {
+        deactivateWorldBonus(worldBonus.activeBonus);
+    }
+    worldBonus.reset();
+    bonfires = [];
     const accuracy = p.shotsFired ? p.shotsHit / p.shotsFired : 0;
     const bonus = Math.floor(accuracy * 100);
     p.score += bonus;
@@ -1038,6 +1463,7 @@ function startNewGame() {
     enemyProjectiles = [];
     stars = [];
     powerUps = [];
+    bonfires = [];
     player.hp = 100;
     player.acorns = 100;
     player.bombs = 5;
@@ -1054,6 +1480,15 @@ function startNewGame() {
     player.shieldTimer = 0;
     player.rapidFireTimer = 0;
     player.speedBoostTimer = 0;
+    // Reset world bonus player flags
+    player.windBonusActive = false;
+    player.earthBonusActive = false;
+    player.hidingInObstacle = null;
+    player.freezeBonusActive = false;
+    player.fireBonusActive = false;
+    player.fireImmune = false;
+    // Reset world bonus state machine
+    worldBonus.reset();
     gameRunning = true;
     gamePaused = false;
     nextEliteSpawn = performance.now() / 1000 + 60 + Math.random() * 120;
