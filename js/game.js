@@ -135,56 +135,6 @@ resizeCanvas();
 window.addEventListener('resize', resizeCanvas);
 
 // ----------------------------------------------------------------
-// Splash screen
-// ----------------------------------------------------------------
-function showSplashScreen() {
-    canvas.style.display = 'none';
-    hud.style.display = 'none';
-    if (titleScreen) titleScreen.style.display = 'none';
-    if (controlsLegend) controlsLegend.style.display = 'none';
-
-    const splashScreen = document.createElement('div');
-    splashScreen.id = 'splashScreen';
-    document.body.appendChild(splashScreen);
-
-    const splashText = document.createElement('h1');
-    splashText.id = 'splashText';
-    splashText.innerText = 'Fox Munch by FRM';
-    splashScreen.appendChild(splashText);
-
-    splashScreen.style.position = 'absolute';
-    splashScreen.style.top = '0';
-    splashScreen.style.left = '0';
-    splashScreen.style.width = '100%';
-    splashScreen.style.height = '100%';
-    splashScreen.style.display = 'flex';
-    splashScreen.style.justifyContent = 'center';
-    splashScreen.style.alignItems = 'center';
-    splashScreen.style.backgroundColor = '#ff6600';
-    splashScreen.style.zIndex = '1000';
-
-    splashText.style.color = 'white';
-    splashText.style.fontFamily = 'Impact, sans-serif';
-    splashText.style.fontSize = '100px';
-    splashText.style.animation = 'fadeInOut 4s';
-
-    const styleSheet = document.styleSheets[0];
-    styleSheet.insertRule(`
-        @keyframes fadeInOut {
-            0% { opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { opacity: 0; }
-        }
-    `, styleSheet.cssRules.length);
-
-    setTimeout(() => {
-        splashScreen.remove();
-        showTitleScreen();
-    }, 4000);
-}
-
-// ----------------------------------------------------------------
 // Title screen
 // ----------------------------------------------------------------
 function showTitleScreen() {
@@ -261,8 +211,21 @@ async function handleJoinGame() {
     }
 }
 
+// Sound names that are valid for network-driven playback (must match keys in sounds.js)
+const SOUND_EVENT_NAMES = new Set([
+    'projectileShoot', 'criticalProjectileShoot', 'projectileHit', 'meleeAttack',
+    'collision', 'bombDrop', 'criticalBombDrop', 'playerHurt', 'enemyDeath',
+    'lifeLost', 'gameOver'
+]);
+
 function setupNetworkCallbacks() {
     network.onGameState((state) => {
+        const events = Array.isArray(state.soundEvents) ? state.soundEvents : [];
+        for (const name of events) {
+            if (SOUND_EVENT_NAMES.has(name) && soundManager.sounds[name]) {
+                soundManager.play(name);
+            }
+        }
         currentState = state;
     });
 
@@ -275,6 +238,7 @@ function setupNetworkCallbacks() {
     });
 
     network.onGameOver((data) => {
+        soundManager.play('gameOver');
         gameOverData = data;
         gameActive = false;
         // Update local high score
@@ -1085,4 +1049,4 @@ function showGameOver(data) {
 // ----------------------------------------------------------------
 // Start
 // ----------------------------------------------------------------
-showSplashScreen();
+showTitleScreen();

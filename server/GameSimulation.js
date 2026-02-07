@@ -69,6 +69,10 @@ export default class GameSimulation {
         this.nextEliteSpawn = performance.now() / 1000 + 60 + Math.random() * 120;
         this.gameOverData = null;
 
+        // Sound events: collected during tick, sent to clients so they can play SFX
+        this.soundEvents = [];
+        this.soundCollector = { play: (name) => this.soundEvents.push(name) };
+
         // Wind bonus constants
         this.WIND_PUSH_RADIUS = 200;
         this.WIND_PUSH_FORCE = 3;
@@ -146,6 +150,8 @@ export default class GameSimulation {
     tick(deltaTime) {
         if (!this.gameRunning) return;
         if (this.gamePaused) return;
+
+        this.soundEvents = [];
 
         // World Bonus state machine
         const bonusEvent = this.worldBonus.update(deltaTime);
@@ -282,6 +288,7 @@ export default class GameSimulation {
             );
             projectile.ownerId = player.id;
             this.projectiles.push(projectile);
+            this.soundEvents.push(isCritical ? 'criticalProjectileShoot' : 'projectileShoot');
 
             const rate = player.rapidFireTimer > 0 ? 2 : 1;
             player.projectileCooldown = 0.05 / rate;
@@ -296,6 +303,7 @@ export default class GameSimulation {
             const melee = new Melee(player.x, player.y, player.angle, 50, 0.05, isCritical);
             melee.ownerId = player.id;
             this.melees.push(melee);
+            this.soundEvents.push('meleeAttack');
             if (isCritical) player.meleeHitStreak = 0;
             player.meleeCooldown = 0.5;
         }
@@ -311,6 +319,7 @@ export default class GameSimulation {
             );
             bomb.ownerId = player.id;
             this.bombs.push(bomb);
+            this.soundEvents.push(isCritical ? 'criticalBombDrop' : 'bombDrop');
             player.bombCooldown = 3;
             player.bombs--;
         }
@@ -354,7 +363,7 @@ export default class GameSimulation {
             // because the original Projectile.update does collision inside itself
             const owner = this.getPlayerById(proj.ownerId);
 
-            if (!proj.update(this.bounds, this.enemies, owner, null, this.particles)) {
+            if (!proj.update(this.bounds, this.enemies, owner, this.soundCollector, this.particles)) {
                 this.projectiles.splice(i, 1);
             }
         }
@@ -364,7 +373,7 @@ export default class GameSimulation {
         for (let i = this.melees.length - 1; i >= 0; i--) {
             const melee = this.melees[i];
             const owner = this.getPlayerById(melee.ownerId);
-            if (!melee.update(this.enemies, owner, this.particles, null)) {
+            if (!melee.update(this.enemies, owner, this.particles, this.soundCollector)) {
                 this.melees.splice(i, 1);
             }
         }
@@ -374,7 +383,7 @@ export default class GameSimulation {
         for (let i = this.bombs.length - 1; i >= 0; i--) {
             const bomb = this.bombs[i];
             const owner = this.getPlayerById(bomb.ownerId);
-            if (!bomb.update(this.enemies, owner, this.particles, null, null)) {
+            if (!bomb.update(this.enemies, owner, this.particles, null, this.soundCollector)) {
                 this.bombs.splice(i, 1);
             }
         }
@@ -399,10 +408,12 @@ export default class GameSimulation {
                 if (distance < p.size + player.size) {
                     if ((!player.invulnerableUntil || performance.now() >= player.invulnerableUntil) && player.shieldTimer <= 0) {
                         player.hp -= p.damage;
+                        this.soundEvents.push('playerHurt');
                         player.invulnerableUntil = performance.now() + 120;
                         if (player.hp <= 0) {
                             player.lives--;
                             if (player.lives > 0) {
+                                this.soundEvents.push('lifeLost');
                                 this.respawnPlayer(player);
                             } else {
                                 player.alive = false;
@@ -570,10 +581,12 @@ export default class GameSimulation {
                     let overlap = (enemy.size + player.size) - distance;
                     player.x += normalX * overlap;
                     player.y += normalY * overlap;
+                    this.soundEvents.push('collision');
 
                     if ((!player.invulnerableUntil || performance.now() >= player.invulnerableUntil) && player.shieldTimer <= 0) {
                         player.hp -= enemy.damage;
                         enemy.hp -= enemy.damage;
+                        this.soundEvents.push('playerHurt');
                         player.invulnerableUntil = performance.now() + 120;
 
                         if (enemy.hp <= 0) {
@@ -584,6 +597,7 @@ export default class GameSimulation {
                         if (player.hp <= 0) {
                             player.lives--;
                             if (player.lives > 0) {
+                                this.soundEvents.push('lifeLost');
                                 this.respawnPlayer(player);
                             } else {
                                 player.alive = false;
@@ -628,13 +642,16 @@ export default class GameSimulation {
                         let overlap = (obstacle.size + player.size) - distance;
                         player.x += normalX * overlap;
                         player.y += normalY * overlap;
+                        this.soundEvents.push('collision');
 
                         if ((!player.invulnerableUntil || now >= player.invulnerableUntil) && player.shieldTimer <= 0) {
                             player.hp -= 1;
+                            this.soundEvents.push('playerHurt');
                             player.invulnerableUntil = now + 120;
                             if (player.hp <= 0) {
                                 player.lives--;
                                 if (player.lives > 0) {
+                                    this.soundEvents.push('lifeLost');
                                     this.respawnPlayer(player);
                                 } else {
                                     player.alive = false;
@@ -1159,7 +1176,8 @@ export default class GameSimulation {
             worldHeight: this.height,
             gameRunning: this.gameRunning,
             gamePaused: this.gamePaused,
-            gameOverData: this.gameOverData
+            gameOverData: this.gameOverData,
+            soundEvents: [...this.soundEvents]
         };
     }
 }

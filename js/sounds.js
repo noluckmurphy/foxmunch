@@ -32,12 +32,15 @@ class SoundManager {
 
     play(soundName) {
         const sound = this.sounds[soundName];
-        if (sound) {
-            sound.currentTime = 0; // Reset sound to start
-            const res = sound.play();
-            if (res && typeof res.catch === 'function') {
-                res.catch(e => console.log("Error playing sound:", e));
-            }
+        if (!sound) return;
+        // Use a clone so the same sound can play overlapping (e.g. multiple enemy deaths)
+        // and so we don't rely on resetting one element which can be ignored by the browser
+        const clone = typeof sound.cloneNode === 'function' ? sound.cloneNode() : sound;
+        clone.volume = this.volume;
+        clone.currentTime = 0;
+        const res = clone.play();
+        if (res && typeof res.catch === 'function') {
+            res.catch(() => {});
         }
     }
 }
