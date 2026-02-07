@@ -8,8 +8,8 @@
 import GameSimulation from './GameSimulation.js';
 import { SERVER_TICK_RATE, MAX_PLAYERS } from '../js/config.js';
 
-// Characters for room codes (excludes O/0/I/1/L to avoid confusion)
-const CODE_CHARS = 'abcdefghjkmnpqrstuvwxyz23456789';
+// Room codes: letters only, case-insensitive (normalized to lowercase)
+const CODE_CHARS = 'abcdefghijklmnopqrstuvwxyz';
 
 function generateCode(existingCodes) {
     let code;
@@ -57,7 +57,10 @@ export default class RoomManager {
     }
 
     joinRoom(code, socket, playerName) {
-        const normalizedCode = code.toLowerCase().trim();
+        const normalizedCode = code.toLowerCase().trim().replace(/[^a-z]/g, '');
+        if (normalizedCode.length !== 4) {
+            return { error: 'Invalid room code. Use 4 letters.' };
+        }
         const room = this.rooms.get(normalizedCode);
 
         if (!room) {
