@@ -46,8 +46,33 @@ body, html {
     line-height: 1.4;
 }
 
-#newGameButton {
+.game-over-buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
     margin-top: 20px;
+}
+
+#playAgainButton {
+    margin: 0;
+    padding: 12px 28px;
+    font-size: 20px;
+    display: none;
+    z-index: 101;
+    cursor: pointer;
+    background: #2d8a3e;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+#playAgainButton:hover {
+    background: #237033;
+}
+
+#newGameButton {
+    margin: 0;
     padding: 12px 28px;
     font-size: 20px;
     display: none;

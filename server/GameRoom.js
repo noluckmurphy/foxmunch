@@ -6,7 +6,7 @@
  */
 
 import GameSimulation from './GameSimulation.js';
-import { SERVER_TICK_RATE, MAX_PLAYERS } from '../js/config.js';
+import { SERVER_TICK_RATE, MAX_PLAYERS, PLAYER_COLORS } from '../js/config.js';
 
 // Room codes: letters only, case-insensitive (normalized to lowercase)
 const CODE_CHARS = 'abcdefghijklmnopqrstuvwxyz';
@@ -72,7 +72,21 @@ export default class RoomManager {
         }
 
         if (!room.simulation.gameRunning) {
-            return { error: 'Game in this room has ended.' };
+            // Game has ended: allow rejoin so players can stay in room and use Play Again
+            const colorIndex = room.sockets.size % PLAYER_COLORS.length;
+            const color = PLAYER_COLORS[colorIndex];
+            room.sockets.set(socket.id, { socket, playerId: socket.id, playerName });
+            socket.join(normalizedCode);
+            this.io.to(socket.id).emit('gameState', room.simulation.serialize());
+            return {
+                code: normalizedCode,
+                playerId: socket.id,
+                colorIndex,
+                color,
+                playerCount: room.sockets.size,
+                gameEnded: true,
+                gameOverData: room.simulation.gameOverData
+            };
         }
 
         // Add player to simulation
@@ -147,6 +161,7 @@ export default class RoomManager {
     handleNewGame(socketId) {
         for (const [code, room] of this.rooms) {
             if (room.sockets.has(socketId)) {
+                if (room.simulation.gameRunning) return;
                 // Stop old loop
                 if (room.loop) clearInterval(room.loop);
 

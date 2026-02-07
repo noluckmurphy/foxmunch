@@ -23,6 +23,7 @@ const ctx = canvas.getContext('2d');
 const hud = document.getElementById('hud');
 const messageEl = document.getElementById('message');
 const newGameButton = document.getElementById('newGameButton');
+const playAgainButton = document.getElementById('playAgainButton');
 const pauseOverlay = document.getElementById('pauseOverlay');
 const volumeSlider = document.getElementById('volumeSlider');
 const gamepadIndicator = document.getElementById('gamepadIndicator');
@@ -142,6 +143,7 @@ function showTitleScreen() {
     hud.style.display = 'none';
     if (messageEl) messageEl.innerHTML = '';
     if (newGameButton) newGameButton.style.display = 'none';
+    if (playAgainButton) playAgainButton.style.display = 'none';
     if (pauseOverlay) pauseOverlay.style.display = 'none';
     if (controlsLegend) controlsLegend.style.display = 'none';
 
@@ -202,6 +204,10 @@ async function handleJoinGame() {
         localPlayerId = result.playerId;
         setupNetworkCallbacks();
         transitionToGame();
+        if (result.gameEnded) {
+            gameActive = false;
+            if (result.gameOverData) gameOverData = result.gameOverData;
+        }
     } catch (err) {
         if (titleError) titleError.innerText = err.message || 'Failed to join';
         if (titleStatus) titleStatus.innerText = '';
@@ -259,6 +265,14 @@ function setupNetworkCallbacks() {
         showTitleScreen();
         if (titleError) titleError.innerText = 'Disconnected from server';
     });
+
+    network.onNewGameStarted(() => {
+        gameOverData = null;
+        gameActive = true;
+        if (messageEl) messageEl.innerHTML = '';
+        if (newGameButton) newGameButton.style.display = 'none';
+        if (playAgainButton) playAgainButton.style.display = 'none';
+    });
 }
 
 function transitionToGame() {
@@ -268,6 +282,9 @@ function transitionToGame() {
     if (controlsLegend) controlsLegend.style.display = 'block';
     if (messageEl) messageEl.innerHTML = '';
     if (newGameButton) newGameButton.style.display = 'none';
+    if (playAgainButton) playAgainButton.style.display = 'none';
+
+    document.activeElement?.blur?.();
 
     gameActive = true;
     gamePaused = false;
@@ -299,6 +316,11 @@ if (playerNameInput) {
 if (newGameButton) {
     newGameButton.addEventListener('click', () => {
         showTitleScreen();
+    });
+}
+if (playAgainButton) {
+    playAgainButton.addEventListener('click', () => {
+        network.requestNewGame();
     });
 }
 
@@ -1044,6 +1066,7 @@ function showGameOver(data) {
     }
     messageEl.innerHTML = msg;
     if (newGameButton) newGameButton.style.display = 'block';
+    if (playAgainButton) playAgainButton.style.display = 'block';
 }
 
 // ----------------------------------------------------------------

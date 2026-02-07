@@ -113,6 +113,12 @@ export default class NetworkClient {
         }
     }
 
+    requestNewGame() {
+        if (this.socket && this.connected) {
+            this.socket.emit('requestNewGame');
+        }
+    }
+
     // Event setters
     onGameState(cb) { this._onGameState = cb; }
     onPlayerJoined(cb) { this._onPlayerJoined = cb; }

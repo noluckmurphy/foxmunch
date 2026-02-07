@@ -64,6 +64,11 @@ io.on('connection', (socket) => {
         roomManager.handlePause(socket.id);
     });
 
+    // Request new game in same room (after game over)
+    socket.on('requestNewGame', () => {
+        roomManager.handleNewGame(socket.id);
+    });
+
     // Disconnect
     socket.on('disconnect', () => {
         console.log(`Player disconnected: ${socket.id}`);
