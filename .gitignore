@@ -1,2 +1,5 @@
 # Cursor IDE files
-.cursor/ 
+.cursor/
+
+# Node.js
+node_modules/

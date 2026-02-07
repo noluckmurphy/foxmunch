@@ -1,0 +1,14 @@
+{
+  "name": "foxmunch",
+  "version": "1.0.0",
+  "description": "Fox Munch - A multiplayer co-op survival game",
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0",
+    "socket.io": "^4.7.5"
+  }
+}

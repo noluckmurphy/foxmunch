@@ -16,3 +16,11 @@ export const BOMB_DEFAULTS = {
     radius: { normal: 150, critical: 300 },
     damage: { normal: 40, critical: 200 }
 };
+
+// Multiplayer configuration
+export const PLAYER_COLORS = ['#FFA500', '#4A90D9', '#50C878', '#9B59B6'];
+export const PLAYER_COLOR_NAMES = ['Orange', 'Blue', 'Green', 'Purple'];
+export const WORLD_WIDTH = 1920;
+export const WORLD_HEIGHT = 1080;
+export const SERVER_TICK_RATE = 30;
+export const MAX_PLAYERS = 4;

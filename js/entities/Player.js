@@ -10,12 +10,15 @@ export const RAPID_FIRE_RATE_INCREASE = 2;
 export const SPEED_RATE_INCREASE = 1.5;
 
 export default class Player {
-    constructor(x, y) {
+    constructor(x, y, id = null, name = 'Player', color = PLAYER_DEFAULTS.color) {
+        this.id = id;
+        this.name = name;
         this.x = x;
         this.y = y;
         this.size = PLAYER_DEFAULTS.size;
-        this.color = PLAYER_DEFAULTS.color;
+        this.color = color;
         this.angle = 0;
+        this.alive = true;
         this.vx = 0;
         this.vy = 0;
         this.maxSpeed = PLAYER_DEFAULTS.maxSpeed;
@@ -175,7 +178,7 @@ export default class Player {
                 if (isCritical) soundManager.play('criticalBombDrop');
                 soundManager.play('bombDrop');
             }
-            if (typeof window !== 'undefined' && window.triggerScreenShake) {
+            if (typeof window !== 'undefined' && typeof window.triggerScreenShake === 'function') {
                 window.triggerScreenShake(8, 200);
             }
             this.bombCooldown = 3;
