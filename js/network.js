@@ -73,9 +73,9 @@ export default class NetworkClient {
         });
     }
 
-    createRoom(playerName) {
+    createRoom(playerName, options = {}) {
         return new Promise((resolve, reject) => {
-            this.socket.emit('createRoom', { playerName }, (result) => {
+            this.socket.emit('createRoom', { playerName, rouletteConfig: options.rouletteConfig }, (result) => {
                 if (result.error) {
                     reject(new Error(result.error));
                 } else {
@@ -85,6 +85,12 @@ export default class NetworkClient {
                 }
             });
         });
+    }
+
+    sendRouletteConfig(config) {
+        if (this.socket && this.connected) {
+            this.socket.emit('updateRouletteConfig', config);
+        }
     }
 
     joinRoom(code, playerName) {

@@ -15,6 +15,17 @@ import { inputManager } from './InputManager.js';
 import NetworkClient from './network.js';
 import { PLAYER_COLORS, PLAYER_COLOR_NAMES, WORLD_WIDTH, WORLD_HEIGHT } from './config.js';
 
+// Roulette UI: labels only (server uses js/WorldBonus.js for logic)
+const ROULETTE_LABELS = [
+    { label: 'Wind', icon: '\u{1F32C}\uFE0F' },
+    { label: 'Earth', icon: '\u{1FAA8}' },
+    { label: 'Freeze', icon: '\u2744\uFE0F' },
+    { label: 'Fire', icon: '\u{1F525}' },
+    { label: 'Boss', icon: '\u{1F480}' },
+];
+const DEFAULT_ROULETTE_COUNTDOWN = 90;
+const DEFAULT_ROULETTE_WEIGHTS = [20, 20, 20, 20, 20];
+
 // ----------------------------------------------------------------
 // DOM elements
 // ----------------------------------------------------------------
@@ -74,6 +85,47 @@ if (typeof localStorage !== 'undefined') {
         const parsed = parseInt(stored, 10);
         if (!isNaN(parsed) && isFinite(parsed)) highScore = parsed;
     }
+}
+
+// Roulette test settings (pause menu): countdown timer + outcome %
+const ROULETTE_STORAGE_KEY = 'foxmunch_rouletteConfig';
+
+function normalizeRouletteConfigFromStorage(parsed) {
+    const countdown = typeof parsed?.countdownDuration === 'number' && parsed.countdownDuration > 0
+        ? parsed.countdownDuration
+        : DEFAULT_ROULETTE_COUNTDOWN;
+    let weights = Array.isArray(parsed?.weights) && parsed.weights.length === 5
+        ? parsed.weights.map((w) => Math.max(0, Math.min(100, Number(w) || 0)))
+        : [...DEFAULT_ROULETTE_WEIGHTS];
+    const sum = weights.reduce((a, b) => a + b, 0);
+    if (sum <= 0) weights = [...DEFAULT_ROULETTE_WEIGHTS];
+    else if (sum !== 100) {
+        const scale = 100 / sum;
+        weights = weights.map((w) => Math.round(w * scale));
+        const diff = 100 - weights.reduce((a, b) => a + b, 0);
+        if (diff !== 0) weights[0] = Math.max(0, weights[0] + diff);
+    }
+    return { countdownDuration: countdown, weights };
+}
+
+function getRouletteConfigFromStorage() {
+    if (typeof localStorage === 'undefined') {
+        return { countdownDuration: DEFAULT_ROULETTE_COUNTDOWN, weights: [...DEFAULT_ROULETTE_WEIGHTS] };
+    }
+    try {
+        const raw = localStorage.getItem(ROULETTE_STORAGE_KEY);
+        if (!raw) return { countdownDuration: DEFAULT_ROULETTE_COUNTDOWN, weights: [...DEFAULT_ROULETTE_WEIGHTS] };
+        return normalizeRouletteConfigFromStorage(JSON.parse(raw));
+    } catch {
+        return { countdownDuration: DEFAULT_ROULETTE_COUNTDOWN, weights: [...DEFAULT_ROULETTE_WEIGHTS] };
+    }
+}
+
+function saveRouletteConfigToStorage(config) {
+    if (typeof localStorage === 'undefined') return;
+    try {
+        localStorage.setItem(ROULETTE_STORAGE_KEY, JSON.stringify(config));
+    } catch (_) {}
 }
 
 // ----------------------------------------------------------------
@@ -169,7 +221,7 @@ async function handleStartGame() {
         if (!network.connected) {
             await network.connect();
         }
-        const result = await network.createRoom(name);
+        const result = await network.createRoom(name, { rouletteConfig: getRouletteConfigFromStorage() });
         roomCode = result.code;
         localPlayerId = result.playerId;
         setupNetworkCallbacks();
@@ -1025,28 +1077,84 @@ function updateHUD(state) {
 // ----------------------------------------------------------------
 // Pause overlay
 // ----------------------------------------------------------------
+function applyRouletteSettings() {
+    const timerEl = pauseOverlay?.querySelector('#rouletteTimer');
+    const windEl = pauseOverlay?.querySelector('#rouletteWind');
+    const earthEl = pauseOverlay?.querySelector('#rouletteEarth');
+    const freezeEl = pauseOverlay?.querySelector('#rouletteFreeze');
+    const fireEl = pauseOverlay?.querySelector('#rouletteFire');
+    const bossEl = pauseOverlay?.querySelector('#rouletteBoss');
+    const errEl = pauseOverlay?.querySelector('#rouletteError');
+    if (!timerEl || !windEl || !earthEl || !freezeEl || !fireEl || !bossEl) return;
+
+    const countdownDuration = Math.max(1, Math.min(600, parseInt(timerEl.value, 10) || DEFAULT_ROULETTE_COUNTDOWN));
+    const weights = [
+        Math.max(0, Math.min(100, parseInt(windEl.value, 10) || 0)),
+        Math.max(0, Math.min(100, parseInt(earthEl.value, 10) || 0)),
+        Math.max(0, Math.min(100, parseInt(freezeEl.value, 10) || 0)),
+        Math.max(0, Math.min(100, parseInt(fireEl.value, 10) || 0)),
+        Math.max(0, Math.min(100, parseInt(bossEl.value, 10) || 0))
+    ];
+    const sum = weights.reduce((a, b) => a + b, 0);
+    if (sum !== 100) {
+        if (errEl) errEl.textContent = `Percents must sum to 100 (currently ${sum}). Use 100 for one to force it.`;
+        return;
+    }
+    if (errEl) errEl.textContent = '';
+    const config = { countdownDuration, weights };
+    saveRouletteConfigToStorage(config);
+    network.sendRouletteConfig(config);
+}
+
+// Only rebuild pause overlay when we open it or when player list changes (avoids nuking inputs every frame)
+let lastPauseOverlayPlayersKey = '';
+let wasShowingPauseOverlay = false;
+
 function updatePauseOverlay(state) {
     if (!pauseOverlay) return;
 
     if (state.gamePaused) {
-        let playersHtml = '';
-        for (const p of state.players) {
-            playersHtml += `<div style="color: ${p.color}; margin: 4px 0;">${p.name}${p.id === localPlayerId ? ' (you)' : ''}</div>`;
+        const playersKey = state.players.map((p) => p.id).join(',');
+        const shouldRebuild = !wasShowingPauseOverlay || playersKey !== lastPauseOverlayPlayersKey;
+
+        if (shouldRebuild) {
+            lastPauseOverlayPlayersKey = playersKey;
+            let playersHtml = '';
+            for (const p of state.players) {
+                playersHtml += `<div style="color: ${p.color}; margin: 4px 0;">${p.name}${p.id === localPlayerId ? ' (you)' : ''}</div>`;
+            }
+
+            const rc = getRouletteConfigFromStorage();
+
+            pauseOverlay.innerHTML = `
+                <div style="text-align: center;">
+                    <div style="font-size: 64px; margin-bottom: 20px;">Paused</div>
+                    <div style="font-size: 28px; margin-bottom: 10px;">Room Code</div>
+                    <div style="font-size: 48px; font-family: monospace; letter-spacing: 8px; margin-bottom: 20px; color: #FFA500;">${roomCode ? roomCode.toUpperCase() : '---'}</div>
+                    <div style="font-size: 16px; margin-bottom: 15px; color: #ccc;">Share this code with friends to let them join!</div>
+                    <div style="font-size: 20px; margin-bottom: 8px;">Players:</div>
+                    ${playersHtml}
+                    <hr style="border-color: rgba(255,255,255,0.2); margin: 20px 0;" />
+                    <div style="font-size: 18px; margin-bottom: 10px;">Roulette (test) settings</div>
+                    <div style="font-size: 14px; color: #aaa; margin-bottom: 8px;">Timer (seconds): <input id="rouletteTimer" type="number" min="1" max="600" value="${rc.countdownDuration}" style="width: 60px;" /></div>
+                    <div style="font-size: 14px; color: #aaa; margin-bottom: 4px;">
+                        ${ROULETTE_LABELS.map((b, i) => `${b.icon} <input id="roulette${b.label}" type="number" min="0" max="100" value="${rc.weights[i]}" style="width: 44px;" title="${b.label} %" />`).join(' ')}
+                    </div>
+                    <div style="font-size: 12px; color: #888; margin-bottom: 6px;">Percents must sum to 100 (use 100 for one to force it)</div>
+                    <div id="rouletteError" style="font-size: 12px; color: #e66; margin-bottom: 4px;"></div>
+                    <button id="rouletteApply" type="button" style="padding: 6px 14px; font-size: 14px; cursor: pointer;">Apply</button>
+                    <div style="font-size: 14px; margin-top: 15px; color: #999;">Press P to resume</div>
+                </div>
+            `;
+
+            const applyBtn = pauseOverlay.querySelector('#rouletteApply');
+            if (applyBtn) applyBtn.addEventListener('click', applyRouletteSettings);
         }
 
-        pauseOverlay.innerHTML = `
-            <div style="text-align: center;">
-                <div style="font-size: 64px; margin-bottom: 20px;">Paused</div>
-                <div style="font-size: 28px; margin-bottom: 10px;">Room Code</div>
-                <div style="font-size: 48px; font-family: monospace; letter-spacing: 8px; margin-bottom: 20px; color: #FFA500;">${roomCode ? roomCode.toUpperCase() : '---'}</div>
-                <div style="font-size: 16px; margin-bottom: 15px; color: #ccc;">Share this code with friends to let them join!</div>
-                <div style="font-size: 20px; margin-bottom: 8px;">Players:</div>
-                ${playersHtml}
-                <div style="font-size: 14px; margin-top: 15px; color: #999;">Press P to resume</div>
-            </div>
-        `;
+        wasShowingPauseOverlay = true;
         pauseOverlay.style.display = 'flex';
     } else {
+        wasShowingPauseOverlay = false;
         pauseOverlay.style.display = 'none';
     }
 }

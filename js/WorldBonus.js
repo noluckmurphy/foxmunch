@@ -19,16 +19,42 @@ const BONUS_TYPES = [
     { id: 'boss',   label: 'Boss',   color: '#6b2fa0', icon: '💀' },
 ];
 
-const COUNTDOWN_DURATION = 90;     // seconds between spins
+const DEFAULT_COUNTDOWN_DURATION = 90;  // seconds between spins
+const DEFAULT_WEIGHTS = [20, 20, 20, 20, 20]; // wind, earth, freeze, fire, boss (%)
 const BONUS_DURATION = 15;         // seconds for Wind / Earth / Freeze / Fire
 const SPIN_DURATION = 3.5;         // seconds the wheel spins
 const REVEAL_DURATION = 3;         // seconds the result is shown before activation
 const WEDGE_ANGLE = (Math.PI * 2) / BONUS_TYPES.length; // 72°
 
+/** Normalize roulette config: countdown (positive number) and weights (5 numbers 0–100 summing to 100). */
+function normalizeRouletteConfig(options) {
+    const countdown = typeof options?.countdownDuration === 'number' && options.countdownDuration > 0
+        ? options.countdownDuration
+        : DEFAULT_COUNTDOWN_DURATION;
+
+    let weights = Array.isArray(options?.weights) && options.weights.length === 5
+        ? options.weights.map((w) => Math.max(0, Math.min(100, Number(w) || 0)))
+        : [...DEFAULT_WEIGHTS];
+    const sum = weights.reduce((a, b) => a + b, 0);
+    if (sum <= 0) weights = [...DEFAULT_WEIGHTS];
+    else if (sum !== 100) {
+        const scale = 100 / sum;
+        weights = weights.map((w) => Math.round(w * scale));
+        const diff = 100 - weights.reduce((a, b) => a + b, 0);
+        if (diff !== 0) weights[0] = Math.max(0, weights[0] + diff);
+    }
+
+    return { countdownDuration: countdown, weights };
+}
+
 export default class WorldBonus {
-    constructor() {
+    constructor(options = null) {
+        const { countdownDuration, weights } = normalizeRouletteConfig(options || {});
+        this._countdownDuration = countdownDuration;
+        this._weights = weights;
+
         this.phase = 'countdown'; // countdown | spinning | reveal | active
-        this.countdownTimer = COUNTDOWN_DURATION;
+        this.countdownTimer = countdownDuration;
         this.activeBonus = null;       // string id or null
         this.bonusTimer = 0;
 
@@ -40,6 +66,16 @@ export default class WorldBonus {
 
         // Reveal timer
         this.revealElapsed = 0;
+    }
+
+    /** Update config (e.g. from pause menu). Next countdown/spin uses new values. */
+    setConfig(options) {
+        const { countdownDuration, weights } = normalizeRouletteConfig(options || {});
+        this._countdownDuration = countdownDuration;
+        this._weights = weights;
+        if (this.phase === 'countdown') {
+            this.countdownTimer = Math.min(this.countdownTimer, countdownDuration);
+        }
     }
 
     /* ------------------------------------------------------------------ */
@@ -59,7 +95,7 @@ export default class WorldBonus {
     /** Reset everything (new game / game-over). */
     reset() {
         this.phase = 'countdown';
-        this.countdownTimer = COUNTDOWN_DURATION;
+        this.countdownTimer = this._countdownDuration;
         this.activeBonus = null;
         this.bonusTimer = 0;
         this.spinElapsed = 0;
@@ -118,7 +154,7 @@ export default class WorldBonus {
                 if (this.activeBonus === 'boss') {
                     // Boss has no timed bonus – immediately restart countdown
                     this.phase = 'countdown';
-                    this.countdownTimer = COUNTDOWN_DURATION;
+                    this.countdownTimer = this._countdownDuration;
                     this.activeBonus = null;
                 } else {
                     this.bonusTimer -= dt;
@@ -127,7 +163,7 @@ export default class WorldBonus {
                         result.bonus = this.activeBonus;
                         this.activeBonus = null;
                         this.phase = 'countdown';
-                        this.countdownTimer = COUNTDOWN_DURATION;
+                        this.countdownTimer = this._countdownDuration;
                     }
                 }
                 break;
@@ -245,8 +281,21 @@ export default class WorldBonus {
         this.phase = 'spinning';
         this.spinElapsed = 0;
 
-        // Pick the result ahead of time
-        this.selectedIndex = Math.floor(Math.random() * BONUS_TYPES.length);
+        // Pick the result ahead of time using configured weights
+        const total = this._weights.reduce((a, b) => a + b, 0);
+        if (total <= 0) {
+            this.selectedIndex = Math.floor(Math.random() * BONUS_TYPES.length);
+        } else {
+            let r = Math.random() * total;
+            this.selectedIndex = 0;
+            for (let i = 0; i < BONUS_TYPES.length; i++) {
+                r -= this._weights[i];
+                if (r <= 0) {
+                    this.selectedIndex = i;
+                    break;
+                }
+            }
+        }
 
         // We want the pointer (at -PI/2, i.e. top of circle) to land in the
         // middle of the selected wedge.  The wedge center (un-rotated) is at:
@@ -280,4 +329,10 @@ export default class WorldBonus {
     }
 }
 
-export { BONUS_TYPES, COUNTDOWN_DURATION, BONUS_DURATION };
+export {
+    BONUS_TYPES,
+    DEFAULT_COUNTDOWN_DURATION,
+    DEFAULT_WEIGHTS,
+    normalizeRouletteConfig,
+    BONUS_DURATION
+};

@@ -27,7 +27,7 @@ import { normalizeAngle } from '../js/utils.js';
 import { PLAYER_DEFAULTS, BOMB_DEFAULTS, PLAYER_COLORS, WORLD_WIDTH, WORLD_HEIGHT } from '../js/config.js';
 
 export default class GameSimulation {
-    constructor(worldWidth = WORLD_WIDTH, worldHeight = WORLD_HEIGHT) {
+    constructor(worldWidth = WORLD_WIDTH, worldHeight = WORLD_HEIGHT, rouletteConfig = null) {
         this.width = worldWidth;
         this.height = worldHeight;
 
@@ -52,8 +52,8 @@ export default class GameSimulation {
         this.powerUps = [];
         this.bonfires = [];
 
-        // World bonus
-        this.worldBonus = new WorldBonus();
+        // World bonus (uses config for timer and weighted roulette)
+        this.worldBonus = new WorldBonus(rouletteConfig);
 
         // Difficulty scaling
         this.baseSpawnChance = 0.02;
@@ -85,6 +85,11 @@ export default class GameSimulation {
         // Initialize world
         this.spawnObstacles();
         this.spawnScenery();
+    }
+
+    /** Update roulette config (countdown duration and outcome weights). Takes effect on next countdown/spin. */
+    setRouletteConfig(config) {
+        this.worldBonus.setConfig(config);
     }
 
     // ----------------------------------------------------------------

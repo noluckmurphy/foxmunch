@@ -30,13 +30,15 @@ export default class RoomManager {
         this.rooms = new Map(); // code -> room
     }
 
-    createRoom(socket, playerName) {
+    createRoom(socket, playerName, options = {}) {
         const code = generateCode(new Set(this.rooms.keys()));
-        const simulation = new GameSimulation();
+        const rouletteConfig = options.rouletteConfig || null;
+        const simulation = new GameSimulation(undefined, undefined, rouletteConfig);
 
         const room = {
             code,
             simulation,
+            rouletteConfig,
             sockets: new Map(), // socketId -> { socket, playerId }
             loop: null,
             lastTickTime: performance.now()
@@ -158,6 +160,16 @@ export default class RoomManager {
         }
     }
 
+    handleUpdateRouletteConfig(socketId, config) {
+        for (const [, room] of this.rooms) {
+            if (room.sockets.has(socketId)) {
+                room.rouletteConfig = config || null;
+                room.simulation.setRouletteConfig(config || {});
+                return;
+            }
+        }
+    }
+
     handleNewGame(socketId) {
         for (const [code, room] of this.rooms) {
             if (room.sockets.has(socketId)) {
@@ -165,8 +177,8 @@ export default class RoomManager {
                 // Stop old loop
                 if (room.loop) clearInterval(room.loop);
 
-                // Create new simulation, re-add all players
-                room.simulation = new GameSimulation();
+                // Create new simulation, re-add all players (keep roulette config)
+                room.simulation = new GameSimulation(undefined, undefined, room.rouletteConfig);
                 room.lastTickTime = performance.now();
 
                 for (const [sid, entry] of room.sockets) {

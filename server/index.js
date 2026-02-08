@@ -37,8 +37,8 @@ io.on('connection', (socket) => {
     console.log(`Player connected: ${socket.id}`);
 
     // Create a new game room
-    socket.on('createRoom', ({ playerName }, callback) => {
-        const result = roomManager.createRoom(socket, playerName || 'Player');
+    socket.on('createRoom', ({ playerName, rouletteConfig }, callback) => {
+        const result = roomManager.createRoom(socket, playerName || 'Player', { rouletteConfig });
         console.log(`Room created: ${result.code} by ${playerName}`);
         callback(result);
     });
@@ -67,6 +67,11 @@ io.on('connection', (socket) => {
     // Request new game in same room (after game over)
     socket.on('requestNewGame', () => {
         roomManager.handleNewGame(socket.id);
+    });
+
+    // Update roulette config (timer + outcome %), e.g. from pause menu
+    socket.on('updateRouletteConfig', (config) => {
+        roomManager.handleUpdateRouletteConfig(socket.id, config);
     });
 
     // Disconnect
