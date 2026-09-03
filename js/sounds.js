@@ -43,6 +43,23 @@ class SoundManager {
             res.catch(() => {});
         }
     }
+
+    /**
+     * Play sound names collected by the server during a tick.
+     * Unknown names are ignored so networked state cannot trigger arbitrary audio.
+     */
+    playSoundEvents(events) {
+        if (!Array.isArray(events)) return;
+        for (const name of events) {
+            this.play(name);
+        }
+    }
 }
+
+export const SOUND_EVENT_NAMES = [
+    'projectileShoot', 'criticalProjectileShoot', 'projectileHit', 'meleeAttack',
+    'collision', 'bombDrop', 'criticalBombDrop', 'playerHurt', 'enemyDeath',
+    'lifeLost', 'gameOver'
+];
 
 export const soundManager = new SoundManager();
