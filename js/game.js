@@ -10,7 +10,7 @@
  *   - HUD, pause overlay, game over screen
  */
 
-import { soundManager } from './sounds.js';
+import { soundManager, SOUND_EVENT_NAMES } from './sounds.js';
 import { inputManager } from './InputManager.js';
 import NetworkClient from './network.js';
 import { PLAYER_COLORS, PLAYER_COLOR_NAMES, WORLD_WIDTH, WORLD_HEIGHT } from './config.js';
@@ -269,21 +269,11 @@ async function handleJoinGame() {
     }
 }
 
-// Sound names that are valid for network-driven playback (must match keys in sounds.js)
-const SOUND_EVENT_NAMES = new Set([
-    'projectileShoot', 'criticalProjectileShoot', 'projectileHit', 'meleeAttack',
-    'collision', 'bombDrop', 'criticalBombDrop', 'playerHurt', 'enemyDeath',
-    'lifeLost', 'gameOver'
-]);
-
 function setupNetworkCallbacks() {
     network.onGameState((state) => {
         const events = Array.isArray(state.soundEvents) ? state.soundEvents : [];
-        for (const name of events) {
-            if (SOUND_EVENT_NAMES.has(name) && soundManager.sounds[name]) {
-                soundManager.play(name);
-            }
-        }
+        const allowed = events.filter((name) => SOUND_EVENT_NAMES.includes(name));
+        soundManager.playSoundEvents(allowed);
         currentState = state;
     });
 
@@ -296,7 +286,9 @@ function setupNetworkCallbacks() {
     });
 
     network.onGameOver((data) => {
-        soundManager.play('gameOver');
+        const alreadyPlayed = Array.isArray(currentState?.soundEvents)
+            && currentState.soundEvents.includes('gameOver');
+        if (!alreadyPlayed) soundManager.play('gameOver');
         gameOverData = data;
         gameActive = false;
         // Update local high score

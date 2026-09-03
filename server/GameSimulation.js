@@ -324,7 +324,8 @@ export default class GameSimulation {
             );
             bomb.ownerId = player.id;
             this.bombs.push(bomb);
-            this.soundEvents.push(isCritical ? 'criticalBombDrop' : 'bombDrop');
+            if (isCritical) this.soundEvents.push('criticalBombDrop');
+            this.soundEvents.push('bombDrop');
             player.bombCooldown = 3;
             player.bombs--;
         }
@@ -356,6 +357,7 @@ export default class GameSimulation {
                     SquareEnemy.split(enemy, this.enemies);
                 }
                 spawnDeathParticles(enemy, this.particles);
+                this.soundEvents.push('enemyDeath');
                 this.enemies.splice(i, 1);
             }
         }
@@ -454,6 +456,7 @@ export default class GameSimulation {
                         }
                         if (enemy instanceof SquareEnemy) SquareEnemy.split(enemy, this.enemies);
                         spawnDeathParticles(enemy, this.particles);
+                        this.soundEvents.push('enemyDeath');
                         this.enemies.splice(j, 1);
                     }
                     this.enemyProjectiles.splice(i, 1);
@@ -597,6 +600,7 @@ export default class GameSimulation {
                         if (enemy.hp <= 0) {
                             if (enemy instanceof SquareEnemy) SquareEnemy.split(enemy, this.enemies);
                             spawnDeathParticles(enemy, this.particles);
+                            this.soundEvents.push('enemyDeath');
                             this.enemies.splice(index, 1);
                         }
                         if (player.hp <= 0) {
@@ -889,6 +893,7 @@ export default class GameSimulation {
         }
 
         this.gameOverData = { playerScores, teamScore: Math.floor(teamScore) };
+        this.soundEvents.push('gameOver');
     }
 
     // ----------------------------------------------------------------
